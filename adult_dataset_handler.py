@@ -40,8 +40,10 @@ class AdultDataset():
         self.n_x = list(self.train_data_loader.dataset.__getitem__(0)[0].shape)[0] - 2 # TODO note we're subtracting the label count here
         self.n_y = 1
         self.n_z = 1
-        self.n_q = 2 # TODO: SEPARATE OBSERVATION AND ACTION SIZES WITH CORRECT NOMENCLATURE RRRRRRRRGH
-        self.critic_loss_fn = torch.nn.MSELoss()
+        self.data_item_size = self.n_x + self.n_y + self.n_z
+        self.critic_loss_fn = torch.nn.MSELoss() # TODO ?
+
+        self.batch_size = train_batch_size
 
 
     # ========== DATASET ITERABLES ==========
@@ -65,18 +67,20 @@ class AdultDataset():
 
 
     # ========= DATA PROPERTIES / AUXILIARIES ==========
-    
+
+    def split_labels(self, data):
+        return (data[:, :self.n_x], data[:, -(self.n_y + self.n_z):-(self.n_z)], data[:, -(self.n_z):])
 
 
+
+    """
     # ========== DATA LABELLING ==========
 
     def split_labels(self, data):
-        # TODO unsqueezed; Better, so long as we remember to be consistent.
         return (data[:, :self.n_x], data[:, -(self.n_y + self.n_z + self.n_q):-(self.n_z+self.n_q)], data[:, -(self.n_z + self.n_q):-self.n_q], data[:, -self.n_q:])
 
 
     def attach_labels(self, X, y, z, q):
-        # TODO unsqueezed; Better, so long as we remember to be consistent.
         # return torch.cat((torch.cat((X, torch.reshape(y, (len(y), 1))), 1), torch.reshape(z, (len(z), 1))), 1)
         return torch.cat((X, y, z, q), 1) 
 
@@ -104,10 +108,6 @@ class AdultDataset():
         return 1
 
 
-    def critic_loss(self, y_true, y_pred):
-        return self.critic_loss_fn(y_true, y_pred)
-
-
     # ========== TARGET SPEC ==========
 
     def get_target_input_n(self):
@@ -116,8 +116,12 @@ class AdultDataset():
 
     def get_target_output_n(self):
         return self.n_y
-
+    """
    
+    # TODO move
+    def critic_loss(self, y_true, y_pred):
+        return self.critic_loss_fn(y_true, y_pred)
+
 
 
     # RETROFITTED ADULT IMPORTING CODE FROM OLDER SYSTEM

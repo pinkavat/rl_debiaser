@@ -6,6 +6,7 @@
 """
 
 import torch
+import copy
 
 import rl_agent.replay_buffer # TODO bad dep
 
@@ -29,10 +30,22 @@ class Agent():
         self.device = device_override if device_override else ("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
         self.dataset = dataset
+
+        # Set up Actor and Critic
         self.actor = actor.to(self.device)
         self.actor_optimizer = actor_optimizer
         self.critic = critic.to(self.device)
         self.critic_optimizer = critic_optimizer
+
+        # Set up Actor and Critic Delayed Models (secondary models, used for evaluation on future state only, to whom Actor and Critic weights are softcopied)
+        # (these are called 'targets' in traditional DL but we don't want to confuse them with the target model on whom the task is working)
+        self.delayed_actor = copy.deepcopy(actor).to(self.device)
+        self.delayed_critic = copy.deepcopy(critic).to(self.device)
+        self.delayed_actor.eval()
+        self.delayed_critic.eval()
+
+        self.gamma = 0.99 # TODO TODO TODO PARAMETRIZE
+        self.tau = 0.001 # TODO TODO TODO PARAMETRIZE
 
         # Set up memory
         self.sample_size = sample_size
@@ -43,7 +56,6 @@ class Agent():
 
     def episode_reset(self):
         """ Resets the agent's state; to be invoked at the beginning of every episode. """
-
         self.memory.clear()
 
 
@@ -57,10 +69,10 @@ class Agent():
 
     
 
-    def observe_action_reward(self, observation, action, reward):
+    def observe_action_reward(self, state, action, reward, next_state):
         """ Observe how the environment reacts to our given action for the given observation; store into memory. """
         
-        self.memory.store((observation, action, reward))
+        self.memory.store((state, action, reward, next_state))
 
 
 
@@ -70,19 +82,24 @@ class Agent():
         if len(self.memory) >= self.sample_size: # TODO how to react to being in 'warmup'?
            
             # Sample from memory
-            observations, actions, rewards = self.memory.sample_into_batches(self.sample_size)
+            states, actions, rewards, next_states = self.memory.sample_into_batches(self.sample_size)
 
             # Flatten batches and dispatch to device
-            observations_batch = torch.cat(observations).to(self.device)
+            states_batch = torch.cat(states).to(self.device)
             actions_batch = torch.cat(actions).to(self.device)
             rewards_batch = torch.cat(rewards).to(self.device)
+            next_states_batch = torch.cat(next_states).to(self.device)
+
+            # Delayed critic estimates future reward
+            with torch.no_grad():
+                delayed_q_pred = rewards_batch + self.gamma * self.delayed_critic(next_states_batch, self.delayed_actor(next_states_batch))
 
             # Critic training pass
             self.critic.train()
             self.critic_optimizer.zero_grad()
 
-            q_pred = self.critic(observations_batch, actions_batch)
-            critic_loss = self.dataset.critic_loss(q_pred, rewards_batch)
+            q_pred = self.critic(states_batch, actions_batch)
+            critic_loss = self.dataset.critic_loss(q_pred, delayed_q_pred)
         
             critic_loss.backward()
             self.critic_optimizer.step()
@@ -93,10 +110,14 @@ class Agent():
                 self.critic.eval()
                 self.actor_optimizer.zero_grad()
 
-                actions_pred = self.actor(observations_batch)
-                actor_loss = -self.critic(observations_batch, actions_pred).mean()
+                actions_pred = self.actor(states_batch)
+                actor_loss = -self.critic(states_batch, actions_pred).mean()
                 actor_loss.backward()
                 self.actor_optimizer.step()
+
+            # Soft-copy weights
+            self.soft_copy_weights(self.actor, self.delayed_actor)
+            self.soft_copy_weights(self.critic, self.delayed_critic)
 
 
     def save_to(self, path):
@@ -131,3 +152,12 @@ class Agent():
             print(f"Agent parameters loaded from {path}")
         except:
             print(f"Couldn't load agent parameters from {path}")
+
+
+    def soft_copy_weights(self, source, target):
+        """
+            Softcopy a model's weights to a delayed model, by the copy factor
+            Code from https://github.com/ghliu/pytorch-ddpg/blob/master/util.py as it's very simple
+        """
+        for source_param, target_param in zip(source.parameters(), target.parameters()):
+            target_param.data.copy_(target_param.data * (1.0 - self.tau) + source_param.data * self.tau)

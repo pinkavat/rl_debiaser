@@ -22,9 +22,16 @@ class RLActor(torch.nn.Module):
         self.dataset = dataset
         self.core = core
         self.factor = torch.nn.Parameter(torch.tensor([initial_factor]))
+        self.clamper = torch.nn.Sigmoid()
+        self.num_to_clamp = dataset.n_y + dataset.n_z
 
     def forward(self, observations):
 
+        pre_clamp = self.core(observations)
+
+        return torch.cat((pre_clamp[:, -self.num_to_clamp:], self.clamper(pre_clamp[:, :-self.num_to_clamp])), 1)
+
+        """
         # Separate observation features and observation labels
         X, y, z, q = self.dataset.split_labels(observations)
 
@@ -36,7 +43,7 @@ class RLActor(torch.nn.Module):
 
         # Concatenate original labels with sum of residue and original features
         return self.dataset.attach_labels(residue + X, y, z, q)
-
+    	"""
 
 # TODO: allgen -- prototype and MAKE MODULAR!
 """

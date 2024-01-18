@@ -43,7 +43,7 @@ class RLTarget():
 
         # Attempt to load parameters from file
         try:
-            self.model = PrimitiveClf(dataset.get_target_input_n(), dataset.get_target_output_n(), hidden_layers)
+            self.model = PrimitiveClf(dataset.n_x, dataset.n_y, hidden_layers)
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
             self.loss_fn = torch.nn.BCELoss()
 
@@ -56,7 +56,7 @@ class RLTarget():
             # Reset and retrain
             assert training_data is not None, "Couldn't load target parameters and couldn't find training data"
 
-            self.model = PrimitiveClf(dataset.get_target_input_n(), dataset.get_target_output_n(), hidden_layers).to(self.device)
+            self.model = PrimitiveClf(dataset.n_x, dataset.n_y, hidden_layers).to(self.device)
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
             self.loss_fn = torch.nn.BCELoss() # TODO duplicate code
 
@@ -71,8 +71,7 @@ class RLTarget():
             
             # Save classifier
             torch.save(self.model.state_dict(), parameter_path)
-            print("Retraining complete; parameters saved at", parameter_path)
-
+            print("Retraining complete; parameters saved at", parameter_path) 
 
 
     def train(self, training_data):
@@ -88,7 +87,7 @@ class RLTarget():
                 ## That is, there's no q in the retraining dataloader. There ought not be -- these are 'actions', which don't have qs.
 
             # Split the labels off
-            X, y, z, q = self.dataset.split_labels(data_item)
+            X, y, z = self.dataset.split_labels(data_item)
             X, y, z = X.to(self.device), y.to(self.device), z.to(self.device)
 
             y_pred = self.model(X)
@@ -150,19 +149,19 @@ class RLTarget():
             total_data_items = 1e-1000 # Cheap nonzerodiv
 
             sensitive_sum = 0
-            sensitive_count = 0
+            sensitive_count = 1e-1000
             non_sensitive_sum = 0
-            non_sensitive_count = 0
+            non_sensitive_count = 1e-1000
 
             zt_eo_states = [0, 1e-1000, 0, 1e-1000] # TP, ALLP, FP, ALLN for z == 1
             zf_eo_states = [0, 1e-1000, 0, 1e-1000] # Ditto for z == 0
 
 
             for data_item in self.testing_data:
-                data_item = torch.cat((data_item[0], torch.full((data_item[0].shape[0], 2), 0.0)), axis=1) # TODO torch dataloader problem (also that '2' is n_q, HARDCODED!)
+                data_item = data_item[0] # TODO torch dataloader problem
 
                 #Split the labels off
-                X, y, z, q = self.dataset.split_labels(data_item)
+                X, y, z = self.dataset.split_labels(data_item)
                 X, y, z = X.to(self.device), y.to(self.device), z.to(self.device)
 
                 y_pred = self.model(X)

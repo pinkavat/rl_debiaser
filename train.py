@@ -15,6 +15,8 @@ DEFAULT_EPISODES = 10
 DEFAULT_AGENT_MEMORY = 16
 DEFAULT_AGENT_SAMPLE = 16
 
+TODO_STATE_SIZE = 2 # TODO Number of items in the 'state'; the input passed to the actor. A TASK SPECIFICATION, rather than a hardcoded thing, ideally.
+
 def run(dataset, target, spec, log_dir = 'logs/'):
     """
         TODO DOCUMENT
@@ -75,10 +77,10 @@ def run(dataset, target, spec, log_dir = 'logs/'):
             return self.perceptron(X)
 
 
-    actor_layer_spec = get_perceptron_spec(spec.get('actor_core_spec', {}), dataset.get_actor_input_n(), dataset.get_actor_output_n())
+    actor_layer_spec = get_perceptron_spec(spec.get('actor_core_spec', {}), TODO_STATE_SIZE, dataset.data_item_size)
     actor = RLActor(dataset, Perceptron(actor_layer_spec))
 
-    critic_layer_spec = get_perceptron_spec(spec.get('critic_core_spec', {}), dataset.get_critic_input_n(), dataset.get_critic_output_n())
+    critic_layer_spec = get_perceptron_spec(spec.get('critic_core_spec', {}), TODO_STATE_SIZE + dataset.data_item_size, 1) # TODO: past state add here?
     critic = RLCritic(dataset, Perceptron(critic_layer_spec))
 
     actor_optimizer_fn = spec.get('actor_optimizer', torch.optim.Adam)
@@ -121,20 +123,28 @@ def run(dataset, target, spec, log_dir = 'logs/'):
 
         current_obs, total_obs = 0, len(dataset.get_training_data())
         rewards = []
-        prev_independence = target.get_max_equalized_odds_violation()
-        for datum in dataset.get_training_data():
-            q = target.get_max_equalized_odds_violation()
-            q_two = q - prev_independence
-            prev_independence = q
-            observation = torch.cat((datum[0], torch.full((datum[0].shape[0], 1), q), torch.full((datum[0].shape[0], 1), q_two) ), axis=1) # torch dataloaders expect to be given labels too. We're breaking the labels ourselves.
-                                    # TODO write our own dataloader if we relax batch req.
 
-            action = agent.act_on(observation)
+        # Initial state setup
+        prev_metric = target.get_max_equalized_odds_violation()
+        state = torch.cat((torch.full((dataset.batch_size, 1), prev_metric), torch.full((dataset.batch_size, 1), 0.0) ), axis=1)
 
-            reward = temp_react(action, target, spec.get('repetitions', 1))
-            rewards = rewards + [r.item() for r in reward] # TODO squash to efficiency
+        for datum in dataset.get_training_data(): # TODO: No longer perturbing -- passes, instead
+
+            action = agent.act_on(state)
+
+            reward = temp_react(action, target, spec.get('repetitions', 1)) # TODO this isn't actually multiflog -- need to ASSEMBLE a dataset, or maybe jump batch size?
+            rewards = rewards + [r.item() for r in reward]
+
+            # Measure current target state, to be recorded as 'future state' by the agent
+            metric = target.get_max_equalized_odds_violation()
+            delta_metric = metric - prev_metric
+            prev_metric = metric
+            next_state = torch.cat((torch.full((dataset.batch_size, 1), metric), torch.full((dataset.batch_size, 1), delta_metric) ), axis=1)
            
-            agent.observe_action_reward(observation, action, reward)
+            agent.observe_action_reward(state, action, reward, next_state)
+    
+            # Now the future state becomes the present_state for the next pass
+            state = next_state
 
             agent.learn_from_memory(train_actor = episode >= spec.get('actor_learn_start', 0))
 
