@@ -183,8 +183,8 @@ class RLTarget():
                 # TODO overhaul all this stuff with cleaner torch statements
                 # For now we duplicate some calcs w.r.t. independence
                 y_and_pred = torch.cat((y, y_pred.round()), 1)
-                zt_ys = torch.where(z == 1, y_and_pred, torch.tensor([0.]))
-                zf_ys = torch.where(z == 0, y_and_pred, torch.tensor([0.]))
+                zt_ys = torch.where(z == 1, y_and_pred, torch.tensor([0.]).to(y_pred.device))
+                zf_ys = torch.where(z == 0, y_and_pred, torch.tensor([0.]).to(y_pred.device))
 
                 self.__eq_odds_helper(zt_ys, zt_eo_states)
                 self.__eq_odds_helper(zf_ys, zf_eo_states)                
