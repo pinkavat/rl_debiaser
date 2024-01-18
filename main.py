@@ -73,9 +73,11 @@ def supersized_system_tests(act_count, act_size, crit_count, crit_size, episodes
         'episodes' : episodes,
     })
 
-# TODO autoenumeration of repeat tests?
-
 train.run(dataset, target, {
-    'name' : "test_IGNORE",
-    'episodes' : 10,
+    'name' : "test_extended",
+    'episodes' : 300,
+    'actor_core_spec' : {'hidden_layers':[400,300]},
+    'actor_optimizer_params' : {'lr':1e-4},
+    'critic_core_spec' : {'hidden_layers':[400,300]},
+    'critic_optimizer_params' : {'lr':1e-3},
 })
