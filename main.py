@@ -52,14 +52,12 @@ torch.use_deterministic_algorithms(True)
 random.seed(0)
 
 
-# Set up dataset and domain interface
-dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_batch_size = 32, test_batch_size = 32) # TODO batch size hyperparam
+# Set up dataset and domain interface TODO note train size reduced for functionality testing
+dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.2)
 #dataset = compas_dataset_handler.COMPASDataset('../compas/compas_scores_two_years_clean.csv', train_batch_size = 32, test_batch_size = 32) # TODO batch size hyperparam
 
 # Set up the target model
-target = target_nn_adult.RLTarget(dataset, dataset.get_target_eval_data(), training_data = dataset.get_training_data(), device_override='cpu', parameter_path='temp/params_target.pt') # TODO training/testing data source
-# TODO TODO TODO: sample size problems etc. Also we're reaching into the dataset -- wrap in method later.
-# TODO: bad dep again. Shouldn't be the responsibility of the main to worry about how the target tests its fairness.
+target = target_nn_adult.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_adult.pt')
 print('')
 
 

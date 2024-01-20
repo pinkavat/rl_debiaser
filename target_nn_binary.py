@@ -10,7 +10,7 @@ import math # for isnan below
 
 class RLTarget():
     
-    def __init__(self, dataset, testing_data, training_data = None, device_override = None, hidden_layers = 50, learning_rate = 1e-5, parameter_path = 'params_target.pt'):
+    def __init__(self, dataset, device_override = None, hidden_layers = 50, learning_rate = 1e-5, parameter_path = 'params_target.pt'):
         
         self.dataset = dataset
         self.device = device_override if device_override else ("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
@@ -20,7 +20,6 @@ class RLTarget():
         self.model_accuracy = 0.0
         self.model_independence = 0.0
         self.model_eo_max = 0.0
-        self.testing_data = testing_data
         self.parameter_path = parameter_path
 
 
@@ -54,7 +53,9 @@ class RLTarget():
         except:
 
             # Reset and retrain
-            assert training_data is not None, "Couldn't load target parameters and couldn't find training data"
+            retraining_data = dataset.get_retraining_data()
+
+            assert retraining_data is not None, "Don't have parameters and couldn't get retraining data from dataset"
 
             self.model = PrimitiveClf(dataset.n_x, dataset.n_y, hidden_layers).to(self.device)
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
@@ -65,7 +66,7 @@ class RLTarget():
             # Retrain from scratch
             for epoch in range(10): # TODO a non-hyperparam but ought to still vary
                 print(f"\tEpoch {epoch}:")
-                self.train(training_data)
+                self.train(retraining_data)
                 print(f"\t\tTest accuracy: {self.get_accuracy()}\n\t\tTest Independence: {self.get_independence()}")
             
             
@@ -83,8 +84,7 @@ class RLTarget():
 
         for data_item in training_data:
             if isinstance(data_item, list):
-                data_item = data_item[0] # TODO torch dataloader problem # TODO TODO SERIOUS RETRAINING PROBLEM -- NEED TO RESOLVE OBS/ACT MISMATCH NOW!!!!!!!
-                ## That is, there's no q in the retraining dataloader. There ought not be -- these are 'actions', which don't have qs.
+                data_item = data_item[0] # TODO torch dataloader problem
 
             # Split the labels off
             X, y, z = self.dataset.split_labels(data_item)
@@ -139,7 +139,7 @@ class RLTarget():
 
 
 
-    def __run_tests(self):
+    def __run_tests(self, validation = False):
         """ Internal function that runs a test step to gather metrics. Implicitly invoked by asking for a metric. """
 
         self.model.eval() # Set for evaluation
@@ -157,7 +157,7 @@ class RLTarget():
             zf_eo_states = [0, 1e-1000, 0, 1e-1000] # Ditto for z == 0
 
 
-            for data_item in self.testing_data:
+            for data_item in (self.dataset.get_testing_data() if validation else self.dataset.get_training_data()):
                 data_item = data_item[0] # TODO torch dataloader problem
 
                 #Split the labels off
