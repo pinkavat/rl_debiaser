@@ -145,6 +145,24 @@ class COMPASDataset():
                'start', 'end', 'event', 'two_year_recid', 'length_of_stay',
                'score_factor', 'y_pred'],
               dtype='object')
+
+        Alex was using:
+                        "sex",
+                        "age",
+                        "age_cat",
+                        "race",
+                        "c_charge_degree",
+                        "c_charge_desc",
+                        "juv_fel_count",
+                        "juv_misd_count",
+                        "juv_other_count",
+                        "priors_count",
+                        "two_year_recid",
+
+            TODO TODO TODO:
+                NO DECILE SCORE
+                TWO YEAR RECID AS LABEL!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                
         """
 
 

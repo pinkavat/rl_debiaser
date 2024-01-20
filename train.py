@@ -185,11 +185,13 @@ def temp_react(action_batch, target, repetitions, use_eo = True): # TODO SPEC IT
             target.train([action.unsqueeze(0)]) # Note the list-clash here, resolve in env. 
 
         current_reward = 0.0 - target.get_max_equalized_odds_violation() if use_eo else target.get_independence()
+        
         reward = current_reward - previous_reward
 
         previous_reward = current_reward
 
         results.append(torch.tensor([reward]))
+        
 
     return torch.stack(results)
 

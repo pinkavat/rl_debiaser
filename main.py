@@ -65,19 +65,25 @@ print('')
 
 # SUPERSIZED SYSTEM TESTS
 
-def supersized_system_tests(act_count, act_size, crit_count, crit_size, episodes = 10, name=None):
+def supersized_system_tests(act_count, act_size, crit_count, crit_size, episodes = 10, name=None, alr=1e-3, clr=1e-3):
     train.run(dataset, target, {
         'name' : name if name else f"a{act_count}:{act_size}-c{crit_count}:{crit_size}",
         'actor_core_spec' : {'hidden_count':act_count, 'hidden_size':act_size},
         'critic_core_spec' : {'hidden_count':crit_count, 'hidden_size':crit_size},
         'episodes' : episodes,
+        
+        'actor_optimizer_params' : {'lr':alr},
+        'critic_optimizer_params' : {'lr':clr},
     })
 
-train.run(dataset, target, {
-    'name' : "test_extended",
-    'episodes' : 300,
-    'actor_core_spec' : {'hidden_layers':[400,300]},
-    'actor_optimizer_params' : {'lr':1e-4},
-    'critic_core_spec' : {'hidden_layers':[400,300]},
-    'critic_optimizer_params' : {'lr':1e-3},
-})
+
+supersized_system_tests(2,300,2,300,episodes=20,alr=1e-4,clr=1e-3,name="a2:300-c2:300_3")
+
+#train.run(dataset, target, {
+#    'name' : "test_",
+#    'episodes' : 300,
+#    'actor_core_spec' : {'hidden_layers':[400,300]},
+#    'actor_optimizer_params' : {'lr':1e-4},
+#    'critic_core_spec' : {'hidden_layers':[400,300]},
+#    'critic_optimizer_params' : {'lr':1e-3},
+#})
