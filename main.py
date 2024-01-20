@@ -53,11 +53,11 @@ random.seed(0)
 
 
 # Set up dataset and domain interface TODO note train size reduced for functionality testing
-dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.2)
-#dataset = compas_dataset_handler.COMPASDataset('../compas/compas_scores_two_years_clean.csv', train_batch_size = 32, test_batch_size = 32) # TODO batch size hyperparam
+#dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.2)
+dataset = compas_dataset_handler.COMPASDataset('../compas/compas_scores_two_years_clean.csv')
 
 # Set up the target model
-target = target_nn_adult.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_adult.pt')
+target = target_nn_adult.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_compas.pt')
 print('')
 
 

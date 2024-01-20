@@ -8,39 +8,32 @@ import torch
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-# from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.preprocessing import StandardScaler
 
 
 
 class COMPASDataset():
 
-
-    def __init__(self, path, train_batch_size, test_batch_size):
+    def __init__(self, path, train_size = 0.9, test_size = 0.1, train_batch_size = 32, test_batch_size = 32):
         """ Set up the dataloaders and spec. """
     
         # Set up dataloaders
+        self.data_path = path
         
         # Load from file into pandas dataframes
-        # TODO train-test split parametrize; TODO Cross-validation?
-        X_train, X_test, y_train, y_test, z_train, z_test = COMPASDataset.import_data(path, COMPASDataset.sens_attr_sub_sex) # TODO sens attr parametrize
-
-        # Split the training data into data used to train the RL debiaser and data used to evaluate the target's fairness (to generate environmental reward)
-        # TODO: this is a major concern -- how much data is enough (stats power question) where do we get it (here? maybe no good) how do we chop it to keep it
-        # statistically viable (stats question / crossval question)
-        X_train, X_target_eval, y_train, y_target_eval, z_train, z_target_eval = train_test_split(X_train, y_train, z_train, train_size = 0.8, test_size = 0.2)
-        X_test, X_target_eval_test, y_test, y_target_eval_test, z_test, z_target_eval_test = train_test_split(X_test, y_test, z_test, test_size = 0.8) # TODO
+        # TODO Cross-validation?
+        X_train, X_test, y_train, y_test, z_train, z_test = COMPASDataset.import_data(path, COMPASDataset.sens_attr_sub_sex, train_size, test_size) # TODO sens attr parametrize
         
         self.train_data_loader = COMPASDataset.import_to_torch_dataloader(X_train, y_train, z_train, train_batch_size)
         self.test_data_loader = COMPASDataset.import_to_torch_dataloader(X_test, y_test, z_test, test_batch_size)
-        self.target_eval_data_loader = COMPASDataset.import_to_torch_dataloader(X_target_eval, y_target_eval, z_target_eval, test_batch_size)
-        self.target_eval_test_data_loader = COMPASDataset.import_to_torch_dataloader(X_target_eval_test, y_target_eval_test, z_target_eval_test, test_batch_size)
 
         # Set shapes etc.
         self.n_x = list(self.train_data_loader.dataset.__getitem__(0)[0].shape)[0] - 2 # TODO note we're subtracting the label count here
         self.n_y = 1
         self.n_z = 1
-        self.critic_loss_fn = torch.nn.MSELoss()
+        self.data_item_size = self.n_x + self.n_y + self.n_z
+        self.critic_loss_fn = torch.nn.MSELoss() # TODO ?
+        self.batch_size = train_batch_size
 
 
     # ========== DATASET ITERABLES ==========
@@ -50,72 +43,28 @@ class COMPASDataset():
         return self.train_data_loader
 
 
-    def get_tuning_data(self):
+    def get_testing_data(self):
         """ Get an iterable testing data set. Hands back a pytorch DataLoader. """
         return self.test_data_loader
 
-    def get_target_eval_data(self):
-        """ TODO """
-        return self.target_eval_data_loader
 
-
-    # TODO target eval data loaders?
+    def get_retraining_data(self):
+        """ In the event that the target hasn't been trained yet, create just for it a bespoke dataset. """
+        # TODO: separation of validation concern.
+        X_retrain, _, y_retrain, _, z_retrain, _ = COMPASDataset.import_data(self.data_path, COMPASDataset.sens_attr_sub_sex, 0.95, 0.05) # Sens attr no-care
+        return COMPASDataset.import_to_torch_dataloader(X_retrain, y_retrain, z_retrain, 32)
 
 
 
     # ========= DATA PROPERTIES / AUXILIARIES ==========
     
-
-
-    # ========== DATA LABELLING ==========
-
     def split_labels(self, data):
-        # TODO unsqueezed; Better, so long as we remember to be consistent.
-        return (data[:, :self.n_x], data[:, -(self.n_y + self.n_z):-self.n_z], data[:, -self.n_z:])
+        return (data[:, :self.n_x], data[:, -(self.n_y + self.n_z):-(self.n_z)], data[:, -(self.n_z):])
 
 
-    def attach_labels(self, X, y, z):
-        # TODO unsqueezed; Better, so long as we remember to be consistent.
-        # return torch.cat((torch.cat((X, torch.reshape(y, (len(y), 1))), 1), torch.reshape(z, (len(z), 1))), 1)
-        return torch.cat((X, y, z), 1) 
-
-
-    # ========== ACTOR SPEC ==========
-
-    def get_actor_input_n(self):
-        return self.n_x + self.n_y + self.n_z
-
-
-    def get_actor_output_n(self):
-        return self.n_x
-
-
-    # ========== CRITIC SPEC ==========
-
-    # TODO: old model
-    #def get_critic_input_n(self):
-    #    return self.n_x + self.n_y + self.n_z
-    def get_critic_input_n(self):
-        return 2 * (self.n_x + self.n_y + self.n_z)
-
-
-    def get_critic_output_n(self):
-        return 1
-
-
+    # TODO move?
     def critic_loss(self, y_true, y_pred):
         return self.critic_loss_fn(y_true, y_pred)
-
-
-    # ========== TARGET SPEC ==========
-
-    def get_target_input_n(self):
-        return self.n_x
-
-
-    def get_target_output_n(self):
-        return self.n_y
-
    
 
 
@@ -123,7 +72,7 @@ class COMPASDataset():
     # TODO: sensitive attribute not right for multiclass sensitivity --> sensitivity is a onehot thing at present, should be true multiclass
 
     @staticmethod
-    def import_data(path, sensitive_attribute_sub):
+    def import_data(path, sensitive_attribute_sub, train_size_, test_size_):
         """
             Generate train/test datasets from file and sensitive attribute splitter function.
         """
@@ -158,18 +107,13 @@ class COMPASDataset():
                         "juv_other_count",
                         "priors_count",
                         "two_year_recid",
-
-            TODO TODO TODO:
-                NO DECILE SCORE
-                TWO YEAR RECID AS LABEL!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                
+ 
         """
 
 
         # Parse file    
         # TODO hardcode drop sex, hardcoded add sensitive (OVERHAUL OVERHAUL)
-        # TODO first param is what COMPAS thought...
-        feature_names = ['decile_score','age_cat','race','juv_fel_count','juv_misd_count','juv_other_count','priors_count','c_charge_degree','sensitive']
+        feature_names = ['age','age_cat','race','juv_fel_count','juv_misd_count','juv_other_count','priors_count','c_charge_degree','sensitive']
         
         data_raw = pd.read_csv(path, na_values="?", skipinitialspace=True)
 
@@ -179,7 +123,7 @@ class COMPASDataset():
 
 
         # Train-test split the data
-        y = data_raw['is_recid']
+        y = data_raw['two_year_recid'] # TODO or is_recid???
         X = data_raw[feature_names]
 
         # One-hot encoding
@@ -190,7 +134,7 @@ class COMPASDataset():
         X = pd.DataFrame(StandardScaler().fit_transform(X), columns = X.columns)
         X['sensitive'] = z_temp
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.1, random_state = 42)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size = train_size_, test_size = test_size_, random_state = 42)
 
 
         # Extract the sensitive attribute again (it was packaged for the split, as we don't have multi-target splitting)

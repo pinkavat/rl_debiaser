@@ -65,9 +65,9 @@ class RLTarget():
 
             # Retrain from scratch
             for epoch in range(10): # TODO a non-hyperparam but ought to still vary
-                print(f"\tEpoch {epoch}:")
+                print(f"\tEpoch {epoch}:", end = '')
                 self.train(retraining_data)
-                print(f"\t\tTest accuracy: {self.get_accuracy()}\n\t\tTest Independence: {self.get_independence()}")
+                print(f"\tTest accuracy: {self.get_accuracy()}")
             
             
             # Save classifier
