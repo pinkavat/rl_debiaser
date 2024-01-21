@@ -25,7 +25,7 @@ adult_dataset = adult_dataset_handler.AdultDataset('../../adult/adult.data')
 compas_dataset = compas_dataset_handler.COMPASDataset('../../compas/compas_scores_two_years_clean.csv')
 
 # TASK CONTROL
-task_dataset = adult_dataset
+task_dataset = compas_dataset
 
 
 
@@ -43,7 +43,7 @@ class TempModel(torch.nn.Module):
 
         # Model setup here
         self.test_steps = torch.nn.Sequential(
-            torch.nn.Linear(103, 100),
+            torch.nn.Linear(task_dataset.n_x, 100),
             torch.nn.ReLU(),
             torch.nn.Linear(100, 1),
             torch.nn.Sigmoid()
