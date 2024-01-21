@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 class AdultDataset():
 
 
-    def __init__(self, path, train_size = 0.5, test_size = 0.2, train_batch_size = 32, test_batch_size = 32):
+    def __init__(self, path, train_size = 0.9, test_size = 0.1, train_batch_size = 32, test_batch_size = 32):
         """ Set up the dataloaders and spec. """
     
         # Set up dataloaders

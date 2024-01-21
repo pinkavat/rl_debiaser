@@ -11,7 +11,7 @@ import random # Ditto
 import train
 import adult_dataset_handler
 import compas_dataset_handler
-import target_nn_binary as target_nn_adult
+import target_nn_binary
 
 
 # TODO List
@@ -44,7 +44,7 @@ import target_nn_binary as target_nn_adult
 
 
 
-# Seed PRNG
+# Seed PRNG and set for deterministic running
 torch.manual_seed(0)
 np.random.seed(0)
 torch.backends.cudnn.benchmark = False
@@ -52,12 +52,18 @@ torch.use_deterministic_algorithms(True)
 random.seed(0)
 
 
-# Set up dataset and domain interface TODO note train size reduced for functionality testing
-#dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.2)
-dataset = compas_dataset_handler.COMPASDataset('../compas/compas_scores_two_years_clean.csv')
+# Set up dataset and target model
 
-# Set up the target model
-target = target_nn_adult.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_compas.pt')
+# A) ADULT TASK
+# TODO note train size reduced for functionality testing
+dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.2)
+target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_adult.pt')
+
+# or B) COMPAS TASK
+#dataset = compas_dataset_handler.COMPASDataset('../compas/compas_scores_two_years_clean.csv')
+#target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_compas.pt')
+
+
 print('')
 
 
