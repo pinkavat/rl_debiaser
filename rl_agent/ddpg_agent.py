@@ -72,7 +72,7 @@ class Agent():
 
     
 
-    def observe_action_reward(self, state, action, reward, next_state):
+    def observe(self, state, action, reward, next_state):
         """ Observe how the environment reacts to our given action for the given observation; store into memory. """
         
         self.memory.store((state, action, reward, next_state))

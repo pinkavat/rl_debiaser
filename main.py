@@ -81,7 +81,7 @@ def supersized_system_tests(act_count, act_size, crit_count, crit_size, episodes
     })
 
 
-supersized_system_tests(2,300,2,300,episodes=20,alr=1e-4,clr=1e-3,name="a2:300-c2:300_3")
+supersized_system_tests(2,300,2,300,episodes=40,alr=1e-4,clr=1e-3,name="a2:300-c2:300_3")
 
 #train.run(dataset, target, {
 #    'name' : "test_",
