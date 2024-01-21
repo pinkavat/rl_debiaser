@@ -19,7 +19,10 @@ class Agent():
     """
     
 
-    def __init__(self, dataset=None, actor=None, critic=None, actor_optimizer=None, critic_optimizer=None, sample_size=32, memory_size = None, device_override = None):
+    def __init__(
+        self, dataset=None, actor=None, critic=None, actor_optimizer=None, critic_optimizer=None,
+        gamma = 0.99, tau = 0.001, sample_size=32, memory_size = None, device_override = None
+    ):
         """
             Initialize a new Agent, with the given RLActor and RLCritic (actor_critic_wrappers.py) as actor and critic submodels.
             actor_optimizer and critic_optimizers are torch optimization functions.
@@ -44,8 +47,8 @@ class Agent():
         self.delayed_actor.eval()
         self.delayed_critic.eval()
 
-        self.gamma = 0.99 # TODO TODO TODO PARAMETRIZE
-        self.tau = 0.001 # TODO TODO TODO PARAMETRIZE
+        self.gamma = gamma
+        self.tau = tau
 
         # Set up memory
         self.sample_size = sample_size

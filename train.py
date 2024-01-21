@@ -33,6 +33,8 @@ def run(dataset, target, spec, log_dir = 'logs/'):
             critic_reset -- default nonexistent (if existent, episode reset)
             repetitions -- default 1 (how many times a data item is flogged thru target)
 
+            agent_gamma -- future discount rate, default 0.99
+            agent_tau -- softcopy rate, default 0.001
             agent_memory_size
             agent_sample_size
 
@@ -89,7 +91,7 @@ def run(dataset, target, spec, log_dir = 'logs/'):
 
 
     # Set up agent
-    agent = Agent(dataset, actor, critic, actor_optimizer, critic_optimizer, sample_size=spec.get('agent_sample_size', DEFAULT_AGENT_SAMPLE), memory_size=spec.get('agent_memory_size', DEFAULT_AGENT_MEMORY), device_override='cpu')
+    agent = Agent(dataset, actor, critic, actor_optimizer, critic_optimizer, spec.get("agent_gamma", 0.99), spec.get("agent_tau", 0.001), sample_size=spec.get('agent_sample_size', DEFAULT_AGENT_SAMPLE), memory_size=spec.get('agent_memory_size', DEFAULT_AGENT_MEMORY), device_override='cpu')
     print(f"DDPG Agent loaded on {agent.device} device")
 
 
