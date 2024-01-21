@@ -54,7 +54,8 @@ def run(dataset, target, spec, log_dir = 'logs/'):
 
     run_name = spec.get('name', f"unnamed_{int(time.time() * 1000.0)}")
     log_path = log_dir + run_name + ".csv"
-    log(log_path, ['episode', run_name + "_accuracy", run_name + "_fairness", run_name+"_EO", run_name + "_mean_reward", run_name + "_min_reward", run_name + "_max_reward"], mode='w')
+    log(log_path, ['episode', run_name + "_accuracy", run_name + "_fairness", run_name+"_EO", run_name + "_mean_reward", run_name + "_min_reward", run_name + "_max_reward", run_name + "_mean_future_pred_rew"], mode='w')
+
 
     print(f"Starting run {run_name}")
     print("{")
@@ -100,7 +101,7 @@ def run(dataset, target, spec, log_dir = 'logs/'):
     print(f"\nInitial target accuracy: {target.get_accuracy()}\nInitial target independence: {target.get_independence()}\nInitial target EO violation: {target.get_max_equalized_odds_violation()}")
 
     # Log initial state
-    log(log_path, [0, target.get_accuracy(), target.get_independence(),target.get_max_equalized_odds_violation(), 0.0, 0.0, 0.0]) # TODO initial reward meaningful val?
+    log(log_path, [0, target.get_accuracy(), target.get_independence(),target.get_max_equalized_odds_violation(), 0.0, 0.0, 0.0, 0.0]) # TODO initial reward meaningful val?
 
 
     
@@ -129,7 +130,7 @@ def run(dataset, target, spec, log_dir = 'logs/'):
         use_eo = True # TODO parametrize
 
         reward_log = [] # TODO sub metric
-        delta_reward_log = []
+        future_preds_log = [] # Ditto
 
         # Initial state setup
         prev_metric = 0.0 - target.get_max_equalized_odds_violation() if use_eo else target.get_independence()
@@ -160,15 +161,15 @@ def run(dataset, target, spec, log_dir = 'logs/'):
                 # 3) Store observations for batching
                 states.append(state)
                 actions.append(action.squeeze(0)) # Note we have to unbatch the action to restack it
-                rewards.append(torch.tensor([current_metric]))
+                rewards.append(torch.tensor([delta_metric]))
                 next_states.append(next_state)
                 
                 # 4) Advance state for the next pass
                 state = next_state
 
                 # TODO: poor-quality metric extraction of reward data
-                reward_log.append(current_metric)
-                delta_reward_log.append(delta_metric)
+                reward_log.append(delta_metric)
+                future_preds_log.append(agent.estimate_future_reward(next_state.unsqueeze(0)).item())
 
 
             # Batch the observations and pass them to the agent's memory
@@ -191,7 +192,8 @@ def run(dataset, target, spec, log_dir = 'logs/'):
 
         # Log to file
         mean_reward = float(sum(reward_log)) / float(len(reward_log))
-        log(log_path, [episode + 1, target.get_accuracy(), target.get_independence(), target.get_max_equalized_odds_violation(), mean_reward, min(reward_log), max(reward_log)])
+        mean_future_pred = float(sum(future_preds_log)) / float(len(future_preds_log))
+        log(log_path, [episode + 1, target.get_accuracy(), target.get_independence(), target.get_max_equalized_odds_violation(), mean_reward, min(reward_log), max(reward_log), mean_future_pred])
 
 
         # Checkpoint-save if needful

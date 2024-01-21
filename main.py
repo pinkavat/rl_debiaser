@@ -75,13 +75,15 @@ def supersized_system_tests(act_count, act_size, crit_count, crit_size, episodes
         'actor_core_spec' : {'hidden_count':act_count, 'hidden_size':act_size},
         'critic_core_spec' : {'hidden_count':crit_count, 'hidden_size':crit_size},
         'episodes' : episodes,
+
+        'steps' : 256,
         
         'actor_optimizer_params' : {'lr':alr},
         'critic_optimizer_params' : {'lr':clr},
     })
 
 
-supersized_system_tests(2,300,2,300,episodes=40,alr=1e-4,clr=1e-3,name="a2:300-c2:300_3")
+supersized_system_tests(2,300,2,300,episodes=20,alr=1e-4,clr=1e-3,name="a2:300-c2:300_doubled_episode")
 
 #train.run(dataset, target, {
 #    'name' : "test_",

@@ -70,6 +70,11 @@ class Agent():
             self.actor.eval()
             return self.actor(observation.to(self.device))
 
+
+    def estimate_future_reward(self, next_state_batch):
+        """ Returns the delayed critic prediction for the delayed actor decision for the given next-state batch. Diagnostic tool. """
+        with torch.no_grad():
+            return self.delayed_critic(next_state_batch, self.delayed_actor(next_state_batch))
     
 
     def observe(self, state, action, reward, next_state):

@@ -34,7 +34,7 @@ for df in file_dfs:
 full_df = pd.concat(file_dfs, axis=1)
 
 plt.xlabel('Episode')
-plt.ylabel('Reward ($\Delta$ Acceptance Equality)')
+plt.ylabel('Reward ($\Delta$ EO violation)')
 
 plt.legend()
 plt.show()
