@@ -33,7 +33,6 @@ class COMPASDataset():
         self.n_z = 1
         self.data_item_size = self.n_x + self.n_y + self.n_z
         self.critic_loss_fn = torch.nn.MSELoss() # TODO ?
-        self.batch_size = train_batch_size
 
 
     # ========== DATASET ITERABLES ==========
