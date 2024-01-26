@@ -17,6 +17,7 @@ class RLTarget():
         print(f"Target model loaded on {self.device} device")
 
         self.stale = True           # Test metrics are computed upon request.
+        self.metrics_are_validation = False # Whether the computed metrics are from the test-set.
         self.model_accuracy = 0.0
         self.model_independence = 0.0
         self.model_eo_max = 0.0
@@ -103,37 +104,37 @@ class RLTarget():
         self.stale = True
 
 
-    def get_accuracy(self):
+    def get_accuracy(self, validation = False):
         """ Returns the model's mean accuracy on the test set. """
 
-        if self.stale:
-            self.__run_tests()
+        if self.stale or self.metrics_are_validation != validation:
+            self.__run_tests(validation)
 
         return self.model_accuracy
 
 
-    def get_independence(self):
+    def get_independence(self, validation = False):
         """
             Returns P(y'=1 | z=1) / P(y'=1 | z=0)
             Binary Acceptance equality, after Barocas et al.
             The closer to 1, the better.
         """
 
-        if self.stale:
-            self.__run_tests()
+        if self.stale or self.metrics_are_validation != validation:
+            self.__run_tests(validation)
 
         return self.model_independence
 
 
-    def get_max_equalized_odds_violation(self):
+    def get_max_equalized_odds_violation(self, validation = False):
         """
             Returns the maximum of
                 | FPR(z=1) - FPR(z=0) | and
                 | TPR(z=1) - TPR(z=0) |
             Equalized Odds violation; the closer to zero the better.
         """
-        if self.stale:
-            self.__run_tests()
+        if self.stale or self.metrics_are_validation != validation:
+            self.__run_tests(validation)
 
         return self.model_eo_max
 
@@ -208,6 +209,7 @@ class RLTarget():
             self.model_eo_max = 0.0 if math.isnan(max_eo) else max_eo
 
         self.stale = False # Metrics are now up-to-date
+        self.metrics_are_validation = validation
 
 
 
