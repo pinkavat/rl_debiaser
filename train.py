@@ -196,7 +196,7 @@ def run(dataset, target, spec, log_dir = 'logs/'):
 
         test_eo = target.get_max_equalized_odds_violation(validation=True)
 
-        print(f"\ttest accuracy: {target.get_accuracy(validation=True)}\n\ttest independence: {target.get_independence(validation=True)}\n\ttest EO violation: {test_eo}\n\ttrain EO violation: {target.get_max_equalized_odds_violation(validation=False)}\n\tmin intraepisode EO: {min_intraepisode_eo}\n")
+        print(f"\ttest accuracy: {target.get_accuracy(validation=True)}\n\ttest independence: {target.get_independence(validation=True)}\n\t\x1b[1mtest EO violation: {test_eo}\x1b[0m\n\ttrain EO violation: {target.get_max_equalized_odds_violation(validation=False)}\n\tmin intraepisode EO: {min_intraepisode_eo}\n")
         # Log to file
         mean_reward = float(sum(reward_log)) / float(len(reward_log))
         mean_future_pred = float(sum(future_preds_log)) / float(len(future_preds_log))
