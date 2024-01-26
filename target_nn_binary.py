@@ -43,7 +43,7 @@ class RLTarget():
 
         # Attempt to load parameters from file
         try:
-            self.model = PrimitiveClf(dataset.n_x, dataset.n_y, hidden_layers)
+            self.model = PrimitiveClf(dataset.n_x + dataset.n_z, dataset.n_y, hidden_layers)
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
             self.loss_fn = torch.nn.BCELoss()
 
@@ -58,7 +58,7 @@ class RLTarget():
 
             assert retraining_data is not None, "Don't have parameters and couldn't get retraining data from dataset"
 
-            self.model = PrimitiveClf(dataset.n_x, dataset.n_y, hidden_layers).to(self.device)
+            self.model = PrimitiveClf(dataset.n_x + dataset.n_z, dataset.n_y, hidden_layers).to(self.device)
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
             self.loss_fn = torch.nn.BCELoss() # TODO duplicate code
 
@@ -91,7 +91,7 @@ class RLTarget():
             X, y, z = self.dataset.split_labels(data_item)
             X, y, z = X.to(self.device), y.to(self.device), z.to(self.device)
 
-            y_pred = self.model(X)
+            y_pred = self.model(torch.cat((X, z), 1))
 
             loss = self.loss_fn(y_pred, y)
             self.optimizer.zero_grad()
@@ -165,7 +165,7 @@ class RLTarget():
                 X, y, z = self.dataset.split_labels(data_item)
                 X, y, z = X.to(self.device), y.to(self.device), z.to(self.device)
 
-                y_pred = self.model(X)
+                y_pred = self.model(torch.cat((X,z), 1))
 
                 total_correct += (y_pred.round() == y).type(torch.float).sum().item() # Phew
                 total_data_items += X.shape[0]
