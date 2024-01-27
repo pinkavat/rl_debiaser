@@ -142,7 +142,7 @@ class RLTarget():
 
     def __run_tests(self, validation = False):
         """ Internal function that runs a test step to gather metrics. Implicitly invoked by asking for a metric. """
-
+        
         self.model.eval() # Set for evaluation
         with torch.no_grad():
 

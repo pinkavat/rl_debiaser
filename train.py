@@ -7,7 +7,6 @@
 import torch
 import time
 
-from rl_agent.actor_critic_wrappers import RLActor, RLCritic
 from rl_agent.ddpg_agent import Agent
 
 DEFAULT_EPISODES = 10
@@ -83,10 +82,10 @@ def run(dataset, target, spec, log_dir = 'logs/'):
 
 
     actor_layer_spec = get_perceptron_spec(spec.get('actor_core_spec', {}), TODO_STATE_SIZE, dataset.data_item_size)
-    actor = RLActor(dataset, Perceptron(actor_layer_spec))
+    actor = Perceptron(actor_layer_spec)
 
     critic_layer_spec = get_perceptron_spec(spec.get('critic_core_spec', {}), TODO_STATE_SIZE + dataset.data_item_size, 1) # TODO: past state add here?
-    critic = RLCritic(dataset, Perceptron(critic_layer_spec))
+    critic = Perceptron(critic_layer_spec)
 
     actor_optimizer_fn = spec.get('actor_optimizer', torch.optim.Adam)
     actor_optimizer = actor_optimizer_fn(actor.parameters(), **spec.get('actor_optimizer_params', {'lr':1e-3}))
@@ -101,7 +100,9 @@ def run(dataset, target, spec, log_dir = 'logs/'):
 
     # Report initial state
     target.reset()
-    print(f"\nInitial target accuracy: {target.get_accuracy()}\nInitial target independence: {target.get_independence()}\nInitial target EO violation: {target.get_max_equalized_odds_violation()}")
+    print(f"\nInitial target accuracy: {target.get_accuracy(validation=True)}")
+    print(f"Initial target independence: {target.get_independence(validation=True)}")
+    print(f"\x1b[1mInitial target EO violation: {target.get_max_equalized_odds_violation(validation=True)}\x1b[0m")
 
     # Log initial state
     log(log_path, [0, target.get_accuracy(), target.get_independence(),target.get_max_equalized_odds_violation(), 0.0, 0.0, 0.0, 0.0]) # TODO initial reward meaningful val?
@@ -196,7 +197,12 @@ def run(dataset, target, spec, log_dir = 'logs/'):
 
         test_eo = target.get_max_equalized_odds_violation(validation=True)
 
-        print(f"\ttest accuracy: {target.get_accuracy(validation=True)}\n\ttest independence: {target.get_independence(validation=True)}\n\t\x1b[1mtest EO violation: {test_eo}\x1b[0m\n\ttrain EO violation: {target.get_max_equalized_odds_violation(validation=False)}\n\tmin intraepisode EO: {min_intraepisode_eo}\n")
+        print(f"\ttest accuracy: {target.get_accuracy(validation=True)}")
+        print(f"\ttest independence: {target.get_independence(validation=True)}")
+        print(f"\t\x1b[1mtest EO violation: {test_eo}\x1b[0m")
+        print(f"\ttrain EO violation: {target.get_max_equalized_odds_violation(validation=False)}")
+        print(f"\tmin intraepisode EO: {min_intraepisode_eo}")
+
         # Log to file
         mean_reward = float(sum(reward_log)) / float(len(reward_log))
         mean_future_pred = float(sum(future_preds_log)) / float(len(future_preds_log))

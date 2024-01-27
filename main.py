@@ -67,9 +67,6 @@ target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_pat
 
 print('')
 
-
-train.run(dataset, target, {'name' : "throwaway",'episodes' : 1,})
-
 for i in range(4):
     train.run(dataset, target, {
         'name' : f"300_steps_32_s_512_m_{i}",
@@ -83,7 +80,6 @@ for i in range(4):
         'agent_sample_size' : 32,
         'agent_memory_size' : 512,
     })
-
 
 
 """

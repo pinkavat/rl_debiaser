@@ -70,7 +70,7 @@ class Agent():
 
 
 
-    def act_on(self, observation_batch, is_training = False): # TODO TODO: temporarily disabled random exploration
+    def act_on(self, observation_batch, exploration = False): # TODO TODO TODO: exploration temporarily disabled.
         """ Decides on an action given the given observation. """
 
         with torch.no_grad():
@@ -83,7 +83,7 @@ class Agent():
             # TODO better process, distrib params, etc.
             perturbation = [random.uniform(-100.0, 100.0) for x in range(action.size(0))]
 
-            action += float(is_training) * self.explore_factor * torch.tensor(perturbation)
+            action += float(exploration) * self.explore_factor * torch.tensor(perturbation)
 
         # Clamp labels
         action_batch = torch.cat((action_batch[:, :-self.num_to_clamp], self.clamper(action_batch[:, -self.num_to_clamp:])), 1) 
@@ -98,7 +98,7 @@ class Agent():
     def estimate_future_reward(self, next_state_batch):
         """ Returns the delayed critic prediction for the delayed actor decision for the given next-state batch. Diagnostic tool. """
         with torch.no_grad():
-            return self.delayed_critic(next_state_batch, self.delayed_actor(next_state_batch))
+            return self.delayed_critic(torch.cat((next_state_batch, self.delayed_actor(next_state_batch)), 1))
     
 
 
@@ -125,13 +125,13 @@ class Agent():
 
             # Delayed critic estimates future reward
             with torch.no_grad():
-                delayed_q_pred = rewards_batch + self.gamma * self.delayed_critic(next_states_batch, self.delayed_actor(next_states_batch))
+                delayed_q_pred = rewards_batch + self.gamma * self.delayed_critic(torch.cat((next_states_batch, self.delayed_actor(next_states_batch)), 1))
 
             # Critic training pass
             self.critic.train()
             self.critic_optimizer.zero_grad()
 
-            q_pred = self.critic(states_batch, actions_batch)
+            q_pred = self.critic(torch.cat((states_batch, actions_batch), 1))
             critic_loss = self.dataset.critic_loss(q_pred, delayed_q_pred)
         
             critic_loss.backward()
@@ -144,7 +144,7 @@ class Agent():
                 self.actor_optimizer.zero_grad()
 
                 actions_pred = self.actor(states_batch)
-                actor_loss = -self.critic(states_batch, actions_pred).mean()
+                actor_loss = -self.critic(torch.cat((states_batch, actions_pred), 1)).mean()
                 actor_loss.backward()
                 self.actor_optimizer.step()
 
