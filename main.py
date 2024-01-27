@@ -103,42 +103,6 @@ specs_to_try = [
         'agent_sample_size' : 16,
         'agent_memory_size' : 128,
     },
-    {
-        'name' : "512_steps_32_s_128_m",
-        'episodes' : 10,
-        'steps' : 512,
-        'actor_core_spec' : {'hidden_layers':[400,300]},
-        'actor_optimizer_params' : {'lr':1e-4},
-        'critic_core_spec' : {'hidden_layers':[400,300]},
-        'critic_optimizer_params' : {'lr':1e-3},
-
-        'agent_sample_size' : 32,
-        'agent_memory_size' : 128,
-    },
-    {
-        'name' : "512_steps_32_s_512_m",
-        'episodes' : 10,
-        'steps' : 512,
-        'actor_core_spec' : {'hidden_layers':[400,300]},
-        'actor_optimizer_params' : {'lr':1e-4},
-        'critic_core_spec' : {'hidden_layers':[400,300]},
-        'critic_optimizer_params' : {'lr':1e-3},
-
-        'agent_sample_size' : 32,
-        'agent_memory_size' : 512,
-    },
-    {
-        'name' : "1024_steps_32_s_512_m",
-        'episodes' : 10,
-        'steps' : 1024,
-        'actor_core_spec' : {'hidden_layers':[400,300]},
-        'actor_optimizer_params' : {'lr':1e-4},
-        'critic_core_spec' : {'hidden_layers':[400,300]},
-        'critic_optimizer_params' : {'lr':1e-3},
-
-        'agent_sample_size' : 32,
-        'agent_memory_size' : 512,
-    },
 ]
 
 
