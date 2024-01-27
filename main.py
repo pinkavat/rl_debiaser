@@ -68,7 +68,7 @@ target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_pat
 print('')
 
 
-
+train.run(dataset, target, {'name' : "throwaway",'episodes' : 1,})
 
 for i in range(4):
     train.run(dataset, target, {

@@ -22,14 +22,16 @@ class RLActor(torch.nn.Module):
         self.dataset = dataset
         self.core = core
         self.factor = torch.nn.Parameter(torch.tensor([initial_factor]))
-        self.clamper = torch.nn.Sigmoid()
-        self.num_to_clamp = dataset.n_y + dataset.n_z
+        #self.clamper = torch.nn.Sigmoid()
+        #self.num_to_clamp = dataset.n_y + dataset.n_z
 
     def forward(self, observations):
 
-        pre_clamp = self.core(observations)
+        #pre_clamp = self.core(observations)
 
-        return torch.cat((pre_clamp[:, -self.num_to_clamp:], self.clamper(pre_clamp[:, :-self.num_to_clamp])), 1)
+        #return torch.cat((pre_clamp[:, -self.num_to_clamp:], self.clamper(pre_clamp[:, :-self.num_to_clamp])), 1)
+
+        return self.core(observations)
 
         """
         # Separate observation features and observation labels

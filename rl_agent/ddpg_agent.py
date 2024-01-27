@@ -7,6 +7,7 @@
 
 import torch
 import copy
+import random # TODO better dist
 
 import rl_agent.replay_buffer # TODO bad dep
 
@@ -21,7 +22,7 @@ class Agent():
 
     def __init__(
         self, dataset=None, actor=None, critic=None, actor_optimizer=None, critic_optimizer=None,
-        gamma = 0.99, tau = 0.001, sample_size=32, memory_size = None, device_override = None
+        gamma = 0.99, tau = 0.001, exploration_linear_decay = 0.0004, sample_size=32, memory_size = None, device_override = None
     ):
         """
             Initialize a new Agent, with the given RLActor and RLCritic (actor_critic_wrappers.py) as actor and critic submodels.
@@ -33,6 +34,8 @@ class Agent():
         self.device = device_override if device_override else ("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
         self.dataset = dataset
+        self.clamper = torch.nn.Sigmoid()
+        self.num_to_clamp = dataset.n_y + dataset.n_z
 
         # Set up Actor and Critic
         self.actor = actor.to(self.device)
@@ -50,6 +53,9 @@ class Agent():
         self.gamma = gamma
         self.tau = tau
 
+        self.explore_factor = 1.0 # TODO sanity check
+        self.exploration_decay = exploration_linear_decay
+
         # Set up memory
         self.sample_size = sample_size
         backing_size = sample_size if memory_size is None else memory_size
@@ -60,15 +66,30 @@ class Agent():
     def episode_reset(self):
         """ Resets the agent's state; to be invoked at the beginning of every episode. """
         self.memory.clear()
+        self.explore_factor = 1.0
 
 
 
-    def act_on(self, observation):
+    def act_on(self, observation, is_training = True):
         """ Decides on an action given the given observation. """
 
         with torch.no_grad():
             self.actor.eval()
-            return self.actor(observation.to(self.device))
+            action = self.actor(observation.to(self.device))
+
+        # TODO better process, distrib params, etc.
+        perturbations = [random.uniform(-100.0, 100.0) for x in range(action.size(1))] # TODO BATCHDIM BATCHDIM BATCHDIM
+
+        # Add exploration
+        explored_action = action + float(is_training) * self.explore_factor * torch.tensor(perturbations)
+
+        # Clamp labels
+        explored_action = torch.cat((explored_action[:, -self.num_to_clamp:], self.clamper(explored_action[:, :-self.num_to_clamp])), 1) 
+
+        # Decay exploration factor
+        self.explore_factor = max(0.0, self.explore_factor - self.exploration_decay)
+
+        return explored_action
 
 
     def estimate_future_reward(self, next_state_batch):
