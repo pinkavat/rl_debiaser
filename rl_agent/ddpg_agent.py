@@ -53,7 +53,7 @@ class Agent():
         self.gamma = gamma
         self.tau = tau
 
-        self.explore_factor = 1.0 # TODO sanity check
+        self.explore_factor = 1.0
         self.exploration_decay = exploration_linear_decay
 
         # Set up memory
@@ -70,26 +70,29 @@ class Agent():
 
 
 
-    def act_on(self, observation, is_training = True):
+    def act_on(self, observation_batch, is_training = False): # TODO TODO: temporarily disabled random exploration
         """ Decides on an action given the given observation. """
 
         with torch.no_grad():
             self.actor.eval()
-            action = self.actor(observation.to(self.device))
+            action_batch = self.actor(observation_batch.to(self.device))
 
-        # TODO better process, distrib params, etc.
-        perturbations = [random.uniform(-100.0, 100.0) for x in range(action.size(1))] # TODO BATCHDIM BATCHDIM BATCHDIM
+        # Apply exploration perturbation
+        for action in action_batch:
 
-        # Add exploration
-        explored_action = action + float(is_training) * self.explore_factor * torch.tensor(perturbations)
+            # TODO better process, distrib params, etc.
+            perturbation = [random.uniform(-100.0, 100.0) for x in range(action.size(0))]
+
+            action += float(is_training) * self.explore_factor * torch.tensor(perturbation)
 
         # Clamp labels
-        explored_action = torch.cat((explored_action[:, -self.num_to_clamp:], self.clamper(explored_action[:, :-self.num_to_clamp])), 1) 
+        action_batch = torch.cat((action_batch[:, :-self.num_to_clamp], self.clamper(action_batch[:, -self.num_to_clamp:])), 1) 
 
         # Decay exploration factor
         self.explore_factor = max(0.0, self.explore_factor - self.exploration_decay)
 
-        return explored_action
+        return action_batch
+
 
 
     def estimate_future_reward(self, next_state_batch):
@@ -97,6 +100,7 @@ class Agent():
         with torch.no_grad():
             return self.delayed_critic(next_state_batch, self.delayed_actor(next_state_batch))
     
+
 
     def observe(self, state, action, reward, next_state):
         """ Observe how the environment reacts to our given action for the given observation; store into memory. """
