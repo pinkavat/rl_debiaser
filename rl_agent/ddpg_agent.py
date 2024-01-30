@@ -7,7 +7,6 @@
 
 import torch
 import copy
-import random # TODO better dist
 
 import rl_agent.replay_buffer # TODO bad dep
 
@@ -22,7 +21,7 @@ class Agent():
 
     def __init__(
         self, dataset=None, actor=None, critic=None, actor_optimizer=None, critic_optimizer=None,
-        gamma = 0.99, tau = 0.001, exploration_linear_decay = 0.0004, sample_size=32, memory_size = None, device_override = None
+        gamma = 0.99, tau = 0.001, exploration_process = None, exploration_linear_decay = 0.0004, sample_size=32, memory_size = None, device_override = None
     ):
         """
             Initialize a new Agent, with the given RLActor and RLCritic (actor_critic_wrappers.py) as actor and critic submodels.
@@ -53,6 +52,7 @@ class Agent():
         self.gamma = gamma
         self.tau = tau
 
+        self.exploration_process = exploration_process
         self.explore_factor = 1.0
         self.exploration_decay = exploration_linear_decay
 
@@ -70,26 +70,28 @@ class Agent():
 
 
 
-    def act_on(self, observation_batch, exploration = True):
+    def act_on(self, observation_batch):
         """ Decides on an action given the given observation. """
 
         with torch.no_grad():
             self.actor.eval()
             action_batch = self.actor(observation_batch.to(self.device))
 
-        # Apply exploration perturbation
-        for action in action_batch:
+        if self.exploration_process:
 
-            # TODO better process, distrib params, etc.
-            perturbation = [random.uniform(-100.0, 100.0) for x in range(action.size(0))]
+            # Apply exploration perturbation
+            for action in action_batch:
+                
+                perturbation = [self.exploration_process() for x in range(action.size(0))]
 
-            action += float(exploration) * self.explore_factor * torch.tensor(perturbation)
+                action += self.explore_factor * torch.tensor(perturbation)
+
+            # Decay exploration factor
+            self.explore_factor = max(0.0, self.explore_factor - self.exploration_decay)
+
 
         # Clamp labels
         action_batch = torch.cat((action_batch[:, :-self.num_to_clamp], self.clamper(action_batch[:, -self.num_to_clamp:])), 1) 
-
-        # Decay exploration factor
-        self.explore_factor = max(0.0, self.explore_factor - self.exploration_decay)
 
         return action_batch
 
@@ -112,7 +114,7 @@ class Agent():
     def learn_from_memory(self, train_actor = True):
         """ The heart of the DDPG RL technique: sample N observations from memory and train the actor/critic Q learner thereon. """
         
-        if len(self.memory) >= self.sample_size: # TODO how to react to being in 'warmup'?
+        if len(self.memory) >= self.sample_size:
            
             # Sample from memory
             states, actions, rewards, next_states = self.memory.sample_into_batches(self.sample_size)
@@ -151,6 +153,9 @@ class Agent():
             # Soft-copy weights
             self.soft_copy_weights(self.actor, self.delayed_actor)
             self.soft_copy_weights(self.critic, self.delayed_critic)
+
+            # Return critic loss for diagnosis
+            return critic_loss.item()
 
 
     def save_to(self, path):

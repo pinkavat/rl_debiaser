@@ -6,6 +6,7 @@
 
 import torch
 import time
+import random
 
 from rl_agent.ddpg_agent import Agent
 
@@ -56,8 +57,10 @@ def run(dataset, target, spec, log_dir = 'logs/'):
 
     run_name = spec.get('name', f"unnamed_{int(time.time() * 1000.0)}")
     log_path = log_dir + run_name + ".csv"
-    log(log_path, ['episode', run_name + "_accuracy", run_name + "_fairness", run_name+"_EO", run_name + "_mean_reward", run_name + "_min_reward", run_name + "_max_reward", run_name + "_mean_future_pred_rew"], mode='w')
-
+    critic_loss_log_path = log_dir + run_name + "_critic_loss_" + ".csv"
+    #log(log_path, ['episode', 'step', run_name + "_accuracy", run_name + "_fairness", run_name+"_EO", run_name + "_mean_reward", run_name + "_min_reward", run_name + "_max_reward", run_name + "_mean_future_pred_rew"], mode='w')
+    log(log_path, ['episode', 'step', 'is_test', run_name + "_accuracy", run_name + "_dem_par", run_name+"_EO", run_name+"_deltaEO"], mode='w')
+    log(critic_loss_log_path, ['episode', 'step', run_name + '_critic_loss'], mode='w')
 
     print(f"Starting run {run_name}")
     print("{")
@@ -92,9 +95,15 @@ def run(dataset, target, spec, log_dir = 'logs/'):
     critic_optimizer_fn = spec.get('critic_optimizer', torch.optim.Adam)
     critic_optimizer = critic_optimizer_fn(critic.parameters(), **spec.get('critic_optimizer_params', {'lr':1e-3}))
 
+    exploration_process = lambda : random.gauss(1.0, 2.0)
 
     # Set up agent
-    agent = Agent(dataset, actor, critic, actor_optimizer, critic_optimizer, spec.get("agent_gamma", 0.99), spec.get("agent_tau", 0.001), sample_size=spec.get('agent_sample_size', DEFAULT_AGENT_SAMPLE), memory_size=spec.get('agent_memory_size', DEFAULT_AGENT_MEMORY), device_override='cpu')
+    agent = Agent(dataset, actor, critic, actor_optimizer, critic_optimizer,
+        spec.get("agent_gamma", 0.99), spec.get("agent_tau", 0.001),
+        exploration_process = exploration_process,
+        sample_size=spec.get('agent_sample_size', DEFAULT_AGENT_SAMPLE), 
+        memory_size=spec.get('agent_memory_size', DEFAULT_AGENT_MEMORY), 
+        device_override='cpu')
     print(f"DDPG Agent loaded on {agent.device} device")
 
 
@@ -105,9 +114,9 @@ def run(dataset, target, spec, log_dir = 'logs/'):
     print(f"\x1b[1mInitial target EO violation: {target.get_max_equalized_odds_violation(validation=True)}\x1b[0m")
 
     # Log initial state
-    log(log_path, [0, target.get_accuracy(), target.get_independence(),target.get_max_equalized_odds_violation(), 0.0, 0.0, 0.0, 0.0]) # TODO initial reward meaningful val?
-
-
+    #log(log_path, [0, 0, target.get_accuracy(), target.get_independence(),target.get_max_equalized_odds_violation(), 0.0, 0.0, 0.0, 0.0]) # TODO initial reward meaningful val?
+    log(log_path, [0, 0, 1, target.get_accuracy(), target.get_independence(), target.get_max_equalized_odds_violation(), 0.0])
+    overall_step = 1
     
     # Enter training loop
     for episode in range(spec.get('episodes', DEFAULT_EPISODES)): # "episode" for RL, not "epoch"
@@ -136,9 +145,6 @@ def run(dataset, target, spec, log_dir = 'logs/'):
         reward_log = [] # TODO sub metric
         future_preds_log = [] # Ditto
 
-        min_intraepisode_eo = float('inf')
-        min_eo_step = 0
-
         # Initial state setup
         prev_metric = 0.0 - target.get_max_equalized_odds_violation() if use_eo else target.get_independence()
         state = torch.tensor([prev_metric, 0.0])
@@ -163,9 +169,10 @@ def run(dataset, target, spec, log_dir = 'logs/'):
                 delta_metric = current_metric - prev_metric
                 prev_metric = current_metric
 
-                if target.get_max_equalized_odds_violation() < min_intraepisode_eo:
-                    min_intraepisode_eo = target.get_max_equalized_odds_violation()
-                    min_eo_step = step
+                # Log training result
+                log(log_path, [episode + 1, overall_step, 0, target.get_accuracy(), target.get_independence(), target.get_max_equalized_odds_violation(), 0.0 - delta_metric])
+                overall_step += 1
+                
 
                 next_state = torch.tensor([current_metric, delta_metric])
                 
@@ -178,7 +185,7 @@ def run(dataset, target, spec, log_dir = 'logs/'):
                 # 4) Advance state for the next pass
                 state = next_state
 
-                # TODO: poor-quality metric extraction of reward data
+                # TODO: poor-quality metric extraction of reward data (TODO: remove totally in branch!)
                 reward_log.append(delta_metric)
                 future_preds_log.append(agent.estimate_future_reward(next_state.unsqueeze(0)).item())
 
@@ -187,7 +194,8 @@ def run(dataset, target, spec, log_dir = 'logs/'):
             agent.observe(torch.stack(states), torch.stack(actions), torch.stack(rewards), torch.stack(next_states))
 
             # Agent learns, if it's allowed to
-            agent.learn_from_memory(train_actor = episode >= spec.get('actor_learn_start', 0))
+            critic_loss = agent.learn_from_memory(train_actor = episode >= spec.get('actor_learn_start', 0))
+            log(critic_loss_log_path, [episode + 1, step + episode * steps, critic_loss])
             
 
             print_progress_bar(step, steps)
@@ -204,12 +212,15 @@ def run(dataset, target, spec, log_dir = 'logs/'):
         print(f"\ttest independence: {target.get_independence(validation=True)}")
         print(f"\t\x1b[1mtest EO violation: {test_eo}\x1b[0m")
         print(f"\ttrain EO violation: {target.get_max_equalized_odds_violation(validation=False)}")
-        print(f"\tmin intraepisode EO: {min_intraepisode_eo} at step {min_eo_step}")
 
-        # Log to file
+        # Log to file TODO: old model
+        """
         mean_reward = float(sum(reward_log)) / float(len(reward_log))
         mean_future_pred = float(sum(future_preds_log)) / float(len(future_preds_log))
         log(log_path, [episode + 1, target.get_accuracy(validation=True), target.get_independence(validation=True), target.get_max_equalized_odds_violation(validation=True), mean_reward, min(reward_log), max(reward_log), mean_future_pred])
+        """
+
+        log(log_path, [episode + 1, overall_step, 1, target.get_accuracy(validation=True), target.get_independence(validation=True), target.get_max_equalized_odds_violation(validation=True), 0.0])
 
 
         # Checkpoint-save if needful

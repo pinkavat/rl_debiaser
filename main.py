@@ -57,7 +57,7 @@ random.seed(0)
 
 # A) ADULT TASK
 # TODO note train size reduced for functionality testing
-dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.3, test_size = 0.2) # TODO true teststep testing
+dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.3, test_size = 0.2)
 target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_adult.pt')
 
 # or B) COMPAS TASK
@@ -75,9 +75,9 @@ PROMISING_THRESHOLD = 0.09
 specs_to_try = [
 
     {
-        'name' : "explore_400_steps",
-        'episodes' : 100,
-        'steps' : 400,
+        'name' : "exploration_test",
+        'episodes' : 10,
+        'steps' : 128,
         'actor_core_spec' : {'hidden_layers':[400,300]},
         'actor_optimizer_params' : {'lr':1e-4},
         'critic_core_spec' : {'hidden_layers':[400,300]},
@@ -86,8 +86,6 @@ specs_to_try = [
         'agent_sample_size' : 32,
         'agent_memory_size' : 128,
     },
-
-
 ]
 
 
