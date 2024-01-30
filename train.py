@@ -41,12 +41,12 @@ def run(dataset, target, spec, log_dir = 'logs/'):
             agent_sample_size
 
             
-            actor_optimizer
+            actor_optimizer default torch.optim.Adam
             actor_optimizer_params:
-                {lr default 1e-3, etc.}
-            critic_optimizer
+                {lr default 1e-3, etc. passed direct}
+            critic_optimizer ditto
             critic_optimizer_params:
-                {lr default 1e-3, etc.}
+                {lr default 1e-3, etc. passed direct}
 
             actor_core_spec: dictionary. Either:
                 {"hidden_layers":[...]} or {"hidden_count":n, "hidden_size":n}
@@ -137,6 +137,7 @@ def run(dataset, target, spec, log_dir = 'logs/'):
         future_preds_log = [] # Ditto
 
         min_intraepisode_eo = float('inf')
+        min_eo_step = 0
 
         # Initial state setup
         prev_metric = 0.0 - target.get_max_equalized_odds_violation() if use_eo else target.get_independence()
@@ -162,7 +163,9 @@ def run(dataset, target, spec, log_dir = 'logs/'):
                 delta_metric = current_metric - prev_metric
                 prev_metric = current_metric
 
-                min_intraepisode_eo = min(min_intraepisode_eo, target.get_max_equalized_odds_violation())
+                if target.get_max_equalized_odds_violation() < min_intraepisode_eo:
+                    min_intraepisode_eo = target.get_max_equalized_odds_violation()
+                    min_eo_step = step
 
                 next_state = torch.tensor([current_metric, delta_metric])
                 
@@ -201,7 +204,7 @@ def run(dataset, target, spec, log_dir = 'logs/'):
         print(f"\ttest independence: {target.get_independence(validation=True)}")
         print(f"\t\x1b[1mtest EO violation: {test_eo}\x1b[0m")
         print(f"\ttrain EO violation: {target.get_max_equalized_odds_violation(validation=False)}")
-        print(f"\tmin intraepisode EO: {min_intraepisode_eo}")
+        print(f"\tmin intraepisode EO: {min_intraepisode_eo} at step {min_eo_step}")
 
         # Log to file
         mean_reward = float(sum(reward_log)) / float(len(reward_log))

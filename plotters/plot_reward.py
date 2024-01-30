@@ -29,6 +29,7 @@ for df in file_dfs:
     faded_colour = [colour[0], colour[1], colour[2], 0.5]
     plt.fill_between(df.iloc[:, 0].to_numpy(), np.squeeze(df.filter(like='min_reward').to_numpy()) , np.squeeze(df.filter(like='max_reward').to_numpy()), color = faded_colour)
     plt.plot(df.iloc[:, 0].to_numpy(), np.squeeze(df.filter(like='mean_reward').to_numpy()), color = colour, label = series_names[i])
+    plt.plot(df.iloc[:, 0].to_numpy(), np.squeeze(df.filter(like='future_pred_rew').to_numpy()), color = colour, linestyle=':')
     i += 1
 
 full_df = pd.concat(file_dfs, axis=1)

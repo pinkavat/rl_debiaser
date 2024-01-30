@@ -166,4 +166,4 @@ class COMPASDataset():
         z = torch.Tensor(z_pd.values).unsqueeze(1)
 
         dataset = torch.utils.data.TensorDataset(torch.cat((X, y, z), 1))
-        return torch.utils.data.DataLoader(dataset, batch_size=batch_size, drop_last=True) # TODO still necessary to drop ragged batches?
+        return torch.utils.data.DataLoader(dataset, batch_size=batch_size, drop_last=True, shuffle=False) # TODO still necessary to drop ragged batches?

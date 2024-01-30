@@ -70,7 +70,7 @@ class Agent():
 
 
 
-    def act_on(self, observation_batch, exploration = False): # TODO TODO TODO: exploration temporarily disabled.
+    def act_on(self, observation_batch, exploration = True):
         """ Decides on an action given the given observation. """
 
         with torch.no_grad():
