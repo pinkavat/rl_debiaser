@@ -111,7 +111,7 @@ class Agent():
 
 
 
-    def learn_from_memory(self, train_actor = True):
+    def learn_from_memory(self):
         """ The heart of the DDPG RL technique: sample N observations from memory and train the actor/critic Q learner thereon. """
         
         if len(self.memory) >= self.sample_size:
@@ -140,15 +140,14 @@ class Agent():
             self.critic_optimizer.step()
 
             # Actor training pass
-            if(train_actor):
-                self.actor.train()
-                self.critic.eval()
-                self.actor_optimizer.zero_grad()
+            self.actor.train()
+            self.critic.eval()
+            self.actor_optimizer.zero_grad()
 
-                actions_pred = self.actor(states_batch)
-                actor_loss = -self.critic(torch.cat((states_batch, actions_pred), 1)).mean()
-                actor_loss.backward()
-                self.actor_optimizer.step()
+            actions_pred = self.actor(states_batch)
+            actor_loss = -self.critic(torch.cat((states_batch, actions_pred), 1)).mean()
+            actor_loss.backward()
+            self.actor_optimizer.step()
 
             # Soft-copy weights
             self.soft_copy_weights(self.actor, self.delayed_actor)

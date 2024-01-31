@@ -75,19 +75,19 @@ PROMISING_THRESHOLD = 0.09
 specs_to_try = [
 
     {
-        'name' : "emulation_lr_1em5_1em4",
+        'name' : "emulation_lr_1em4_1em3",
 
         'episodes' : 10,
-        'steps' : 1024,
+        'steps' : 32768, # TODO mul 32
         #'step_schedule' : [16, 16, 32, 32, 64, 64, 32, 32, 16],
 
         'explore_sigma' : 8.0,
 
-        'actor_optimizer_params': {'lr': 1e-5},
-        'critic_optimizer_params': {'lr': 1e-4},
+        'actor_optimizer_params': {'lr': 2e-5},
+        'critic_optimizer_params': {'lr': 2e-6},
 
-        'agent_sample_size' : 32,
-        'agent_memory_size' : 128,
+        'agent_sample_size' : 1024, # TODO s32m128 muls by 32 now
+        'agent_memory_size' : 4096,
     },
 
 ]
