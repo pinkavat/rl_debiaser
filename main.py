@@ -71,17 +71,20 @@ print('')
 
 
 REPETITIONS_OF_PROMISING = 3
-PROMISING_THRESHOLD = 0.19
+PROMISING_THRESHOLD = 0.09
 specs_to_try = [
 
     {
-        'name' : "emulation_attempt",
+        'name' : "emulation_lr_1em5_1em4",
 
         'episodes' : 10,
-        'steps' : 128,
+        'steps' : 1024,
         #'step_schedule' : [16, 16, 32, 32, 64, 64, 32, 32, 16],
 
         'explore_sigma' : 8.0,
+
+        'actor_optimizer_params': {'lr': 1e-5},
+        'critic_optimizer_params': {'lr': 1e-4},
 
         'agent_sample_size' : 32,
         'agent_memory_size' : 128,

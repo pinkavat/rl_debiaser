@@ -102,7 +102,6 @@ def run(dataset, target, spec, log_dir = 'logs/'):
     actor_optimizer = actor_optimizer_fn(actor.parameters(), **spec.get('actor_optimizer_params', {'lr':1e-4}))
     critic_optimizer_fn = spec.get('critic_optimizer', torch.optim.Adam)
     critic_optimizer = critic_optimizer_fn(critic.parameters(), **spec.get('critic_optimizer_params', {'lr':1e-3}))
-
     
     exploration_process = (lambda : random.gauss(spec.get('explore_mu', 0.0), spec['explore_sigma'])) if 'explore_sigma' in spec else None
 
@@ -166,6 +165,10 @@ def run(dataset, target, spec, log_dir = 'logs/'):
             actions = []
             rewards = []
             next_states = []
+
+            # TODO amnesiac
+            #if(step % 16 == 0):
+            #    agent.episode_reset()
 
             # Generate batches for the agent to learn from, one item at a time
             for substep in range(batch_size):
