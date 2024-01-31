@@ -75,16 +75,16 @@ PROMISING_THRESHOLD = 0.19
 specs_to_try = [
 
     {
-        'name' : "sanity_check",
+        'name' : "emulation_attempt",
 
-        'episodes' : 100,
-        'steps' : 16,
-        'step_schedule' : [16, 16, 32, 32, 64, 64, 32, 32, 16],
+        'episodes' : 10,
+        'steps' : 128,
+        #'step_schedule' : [16, 16, 32, 32, 64, 64, 32, 32, 16],
 
         'explore_sigma' : 8.0,
 
-        'agent_sample_size' : 32,
-        'agent_memory_size' : 128,
+        'agent_sample_size' : 16,
+        'agent_memory_size' : 16,
     },
 
 ]

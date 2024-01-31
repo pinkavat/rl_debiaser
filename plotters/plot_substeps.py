@@ -44,7 +44,7 @@ for index, df, name in zip(range(len(file_dfs)), file_dfs, names):
     x = test_steps['substep'].to_numpy()
     y = test_steps.filter(regex='_EO').to_numpy()
 
-    epoch_line = plt.plot(x, y, color = colours[index])[0]
+    epoch_line = plt.plot(x, y, color = colours[index], marker='.')[0]
 
     labelled_lines.append(epoch_line)
     labels.append(name)
