@@ -83,8 +83,8 @@ specs_to_try = [
 
         'explore_sigma' : 8.0,
 
-        'agent_sample_size' : 16,
-        'agent_memory_size' : 16,
+        'agent_sample_size' : 32,
+        'agent_memory_size' : 128,
     },
 
 ]
