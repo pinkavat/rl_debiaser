@@ -17,6 +17,8 @@ DEFAULT_AGENT_SAMPLE = 16
 
 TODO_STATE_SIZE = 2 # TODO Number of items in the 'state'; the input passed to the actor. A TASK SPECIFICATION, rather than a hardcoded thing, ideally.
 
+LOG_CRITIC_LOSS = False # TODO
+
 def run(dataset, target, spec, log_dir = 'logs/'):
     """
         TODO DOCUMENT
@@ -63,8 +65,10 @@ def run(dataset, target, spec, log_dir = 'logs/'):
     log_path = log_dir + run_name + ".csv"
     critic_loss_log_path = log_dir + run_name + "_critic_loss_" + ".csv"
     #log(log_path, ['episode', 'step', run_name + "_accuracy", run_name + "_fairness", run_name+"_EO", run_name + "_mean_reward", run_name + "_min_reward", run_name + "_max_reward", run_name + "_mean_future_pred_rew"], mode='w')
-    log(log_path, ['episode', 'step', 'is_test', run_name + "_accuracy", run_name + "_dem_par", run_name+"_EO", run_name+"_deltaEO"], mode='w')
-    log(critic_loss_log_path, ['episode', 'step', run_name + '_critic_loss'], mode='w')
+    log(log_path, ['episode', 'substep', 'is_test', run_name + "_accuracy", run_name + "_dem_par", run_name+"_EO", run_name+"_deltaEO"], mode='w')
+
+    if LOG_CRITIC_LOSS:
+        log(critic_loss_log_path, ['episode', 'substep', run_name + '_critic_loss'], mode='w')
 
     print(f"Starting run {run_name}")
     print("{")
@@ -121,12 +125,14 @@ def run(dataset, target, spec, log_dir = 'logs/'):
     # Log initial state
     #log(log_path, [0, 0, target.get_accuracy(), target.get_independence(),target.get_max_equalized_odds_violation(), 0.0, 0.0, 0.0, 0.0]) # TODO initial reward meaningful val?
     log(log_path, [0, 0, 1, target.get_accuracy(), target.get_independence(), target.get_max_equalized_odds_violation(), 0.0])
-    overall_step = 1
+    overall_substep = 1
     
     # Enter training loop
     for episode in range(spec.get('episodes', DEFAULT_EPISODES)): # "episode" for RL, not "epoch"
         
         print(f"Episode {episode}:")
+
+        target.reset()
 
         agent.episode_reset()
 
@@ -162,7 +168,7 @@ def run(dataset, target, spec, log_dir = 'logs/'):
             next_states = []
 
             # Generate batches for the agent to learn from, one item at a time
-            for i in range(batch_size):
+            for substep in range(batch_size):
         
                 # 1) Agent acts on single state
                 action = agent.act_on(state.unsqueeze(0)) # Note that agent expects batch dimension, and returns batched.
@@ -175,8 +181,8 @@ def run(dataset, target, spec, log_dir = 'logs/'):
                 prev_metric = current_metric
 
                 # Log training result
-                log(log_path, [episode + 1, overall_step, 0, target.get_accuracy(), target.get_independence(), target.get_max_equalized_odds_violation(), 0.0 - delta_metric])
-                overall_step += 1
+                log(log_path, [episode + 1, overall_substep, 0, target.get_accuracy(), target.get_independence(), target.get_max_equalized_odds_violation(), 0.0 - delta_metric])
+                overall_substep += 1
                 
 
                 next_state = torch.tensor([current_metric, delta_metric])
@@ -200,7 +206,9 @@ def run(dataset, target, spec, log_dir = 'logs/'):
 
             # Agent learns, if it's allowed to
             critic_loss = agent.learn_from_memory(train_actor = episode >= spec.get('actor_learn_start', 0))
-            log(critic_loss_log_path, [episode + 1, step + episode * steps, critic_loss])
+            
+            if LOG_CRITIC_LOSS:
+                log(critic_loss_log_path, [episode + 1, step + episode * steps, critic_loss])
             
 
             print_progress_bar(step, steps)
@@ -225,7 +233,7 @@ def run(dataset, target, spec, log_dir = 'logs/'):
         log(log_path, [episode + 1, target.get_accuracy(validation=True), target.get_independence(validation=True), target.get_max_equalized_odds_violation(validation=True), mean_reward, min(reward_log), max(reward_log), mean_future_pred])
         """
 
-        log(log_path, [episode + 1, overall_step, 1, target.get_accuracy(validation=True), target.get_independence(validation=True), target.get_max_equalized_odds_violation(validation=True), 0.0])
+        log(log_path, [episode + 1, overall_substep, 1, target.get_accuracy(validation=True), target.get_independence(validation=True), target.get_max_equalized_odds_violation(validation=True), 0.0])
 
 
         # Checkpoint-save if needful

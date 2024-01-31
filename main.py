@@ -71,30 +71,30 @@ print('')
 
 
 REPETITIONS_OF_PROMISING = 3
-PROMISING_THRESHOLD = 0.09
+PROMISING_THRESHOLD = 0.19
 specs_to_try = [
 
     {
-        'name' : "step_sched_test_sigma_8",
+        'name' : "sanity_check",
 
-        'episodes' : 10,
-        'steps' : 128,
-        'step_schedule' : [16, 16, 32, 32, 64, 128, 128, 128],
+        'episodes' : 100,
+        'steps' : 16,
+        'step_schedule' : [16, 16, 32, 32, 64, 64, 32, 32, 16],
 
         'explore_sigma' : 8.0,
 
         'agent_sample_size' : 32,
         'agent_memory_size' : 128,
     },
+
 ]
 
 
 for source_spec in specs_to_try:
-    spec_index = 1
 
     for repetition in range(REPETITIONS_OF_PROMISING):
         spec = copy.deepcopy(source_spec)
-        spec['name'] = f"{spec.get('name', 'unnamed')}_{spec_index}"
+        spec['name'] = f"{spec.get('name', 'unnamed')}_{repetition + 1}"
         spec['promising_threshold'] = PROMISING_THRESHOLD
         promising = train.run(dataset, target, spec)
 

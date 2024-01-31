@@ -34,14 +34,14 @@ for index, df, name in zip(range(len(file_dfs)), file_dfs, names):
         
         # Plot an episode's worth of steps
 
-        x = grouped.get_group(group)['step'].to_numpy()
+        x = grouped.get_group(group)['substep'].to_numpy()
         y = grouped.get_group(group).filter(regex='_EO').to_numpy()
         
         plt.plot(x, y, color = alt_colours[index])
 
     # Plot the episode-ending test steps
     test_steps = df[df['is_test'] == 1]
-    x = test_steps['step'].to_numpy()
+    x = test_steps['substep'].to_numpy()
     y = test_steps.filter(regex='_EO').to_numpy()
 
     epoch_line = plt.plot(x, y, color = colours[index])[0]
@@ -51,7 +51,7 @@ for index, df, name in zip(range(len(file_dfs)), file_dfs, names):
 
 plt.legend(labelled_lines, labels)
 
-plt.xlabel('Step')
+plt.xlabel('substep')
 plt.ylabel('binary Equalized Odds maximum violation')
 
 plt.show()
