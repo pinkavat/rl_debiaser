@@ -32,7 +32,6 @@ def run(dataset, target, spec, log_dir = 'logs/'):
             agent_batch_size -- batch size for agent, default 32
 
             actor_learn_start -- default 0 (learn at once)
-            target_reset -- default 1 (every ep)
             critic_reset -- default nonexistent (if existent, episode reset)
             repetitions -- default 1 (how many times a data item is flogged thru target) TODO: removed in single-item model
 
@@ -40,6 +39,9 @@ def run(dataset, target, spec, log_dir = 'logs/'):
             agent_tau -- softcopy rate, default 0.001
             agent_memory_size
             agent_sample_size
+
+            explore_mu -- default 0.0.
+            explore_sigma -- no default. If specified, engages exploration.
 
             
             actor_optimizer default torch.optim.Adam
@@ -95,7 +97,8 @@ def run(dataset, target, spec, log_dir = 'logs/'):
     critic_optimizer_fn = spec.get('critic_optimizer', torch.optim.Adam)
     critic_optimizer = critic_optimizer_fn(critic.parameters(), **spec.get('critic_optimizer_params', {'lr':1e-3}))
 
-    exploration_process = lambda : random.gauss(1.0, 2.0)
+    
+    exploration_process = (lambda : random.gauss(spec.get('explore_mu', 0.0), spec['explore_sigma'])) if 'explore_sigma' in spec else None
 
     # Set up agent
     agent = Agent(dataset, actor, critic, actor_optimizer, critic_optimizer,
@@ -124,8 +127,6 @@ def run(dataset, target, spec, log_dir = 'logs/'):
         print(f"Episode {episode}:")
 
         agent.episode_reset()
-        if(episode % spec.get('target_reset', 1) == 0):
-            target.reset()
 
         # Critic Resetting, if specified
         if 'critic_reset' in spec:
