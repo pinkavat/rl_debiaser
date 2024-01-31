@@ -75,19 +75,11 @@ PROMISING_THRESHOLD = 0.09
 specs_to_try = [
 
     {
-        'name' : "throw",
-        'episodes' : 1,
-        'steps' : 1,
-    },
+        'name' : "step_sched_test_sigma_8",
 
-    {
-        'name' : "exploration_sigma_8_again",
         'episodes' : 10,
         'steps' : 128,
-        'actor_core_spec' : {'hidden_layers':[400,300]},
-        'actor_optimizer_params' : {'lr':1e-4},
-        'critic_core_spec' : {'hidden_layers':[400,300]},
-        'critic_optimizer_params' : {'lr':1e-3},
+        'step_schedule' : [16, 16, 32, 32, 64, 128, 128, 128],
 
         'explore_sigma' : 8.0,
 
