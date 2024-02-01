@@ -51,7 +51,7 @@ for index, df, name in zip(range(len(file_dfs)), file_dfs, names):
 
 plt.legend(labelled_lines, labels)
 
-plt.xlabel('substep')
+plt.xlabel('step')
 plt.ylabel('binary Equalized Odds maximum violation')
 
 plt.show()
