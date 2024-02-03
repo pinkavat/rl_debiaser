@@ -21,7 +21,7 @@ class Agent():
 
     def __init__(
         self, dataset=None, actor=None, critic=None, actor_optimizer=None, critic_optimizer=None,
-        gamma = 0.99, tau = 0.001, exploration_process = None, exploration_linear_decay = 0.000, sample_size=32, memory_size = None, device_override = None
+        gamma=None, tau=None, exploration_process=None, exploration_linear_decay = 0.000, sample_size=None, memory_size=None, device_override=None
     ):
         """
             Initialize a new Agent, with the given RLActor and RLCritic (actor_critic_wrappers.py) as actor and critic submodels.
