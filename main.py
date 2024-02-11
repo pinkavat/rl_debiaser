@@ -12,34 +12,8 @@ import copy
 import train
 import adult_dataset_handler
 import compas_dataset_handler
+import german_dataset_handler
 import target_nn_binary
-
-
-# TODO List
-#
-#   Technical:
-#       - Clean test data, followed by True Test Step
-#       - Multiclass fairness
-#       - K-fold cross validation
-#
-#   Theoretical:
-#       - Does the critic get the labels?
-#       - How is sensitivity test data gathered? From what population and what sampling strategy?
-#       - How MANY data items do we need for a sensitivity estimate?
-#       - How MANY data items do we need per perturbation?
-#       - "Rolling fairness" (see notes)
-#       - Algorithm may be prone to fall into local minima
-#       - Reward function: direct bias or delta bias; parametrized accuracy term?
-#       - Age considerations:
-#           - When to reset the target to its initial parameters
-#           - Model is inferring as target is evolving
-#           - Age parameters? Privilege earlier steps? Keep earlier data-items in memory?
-#       - Training data for the initial victim: is it OK if it's the same data pool we use to run the debiaser?
-#       - Target-style actor copying
-#       - Sim annealing optimizer
-#       - Cool-off reset: reset more earlier, then less often?
-#       - Lower batch size
-
 
 
 
@@ -57,24 +31,52 @@ random.seed(0)
 
 # A) ADULT TASK
 # TODO note train size reduced for functionality testing
-dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.3, test_size = 0.5)
-target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_adult.pt')
+#dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.3, test_size = 0.5)
+#target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_adult.pt')
 
 # or B) COMPAS TASK
-#dataset = compas_dataset_handler.COMPASDataset('../compas/compas_scores_two_years_clean.csv')
-#target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_compas.pt')
+dataset = compas_dataset_handler.COMPASDataset('../compas/compas_scores_two_years_clean.csv')
+target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_compas.pt')
 
+# or C) GERMAN CREDIT TASK
+#dataset = german_dataset_handler.GermanDataset('../german/german.data')
+#target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_german.pt')
 
 print('')
 
 
 
 
+train.run(dataset, target, {
+    'name': "sigma_8.0_no_learning_20000_steps",
+    'episodes' : 3,
+    'steps' : 20000,
+
+    'agent_explore_sigma' : 8.0,
+    'actor_optimizer_params' : {'lr' : 0.0},
+    'critic_optimizer_params' : {'lr' : 0.0},
+})
+
+train.run(dataset, target, {
+    'name': "sigma_8.0_A_20000_steps",
+    'episodes' : 3,
+    'steps' : 20000,
+
+    'agent_explore_sigma' : 8.0,
+    'actor_optimizer_params' : {'lr' : 1e-8},
+    'critic_optimizer_params' : {'lr' : 1e-7},
+})
+
+
+
+
+
+
+
+"""
 REPETITIONS_OF_PROMISING = 3
 PROMISING_THRESHOLD = 0.09
 specs_to_try = [
-
-
 
 
 
@@ -113,3 +115,4 @@ for source_spec in specs_to_try:
             break
         else:
             print("\nPromising -- repeating trial\n")
+"""

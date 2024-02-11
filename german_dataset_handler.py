@@ -1,7 +1,7 @@
 """
-    adult_dataset_handler.py
+    german_dataset_handler.py
 
-    Data Loader and Data Specifications for the Adult Dataset debiasing task.
+    Data Loader and Data Specifications for the German Credit debiasing task.
 """
 
 import torch
@@ -12,18 +12,17 @@ from sklearn.preprocessing import StandardScaler
 
 
 
-class AdultDataset():
+class GermanDataset():
 
 
-    def __init__(self, path, train_size = 0.9, test_size = 0.1, train_batch_size = 32, test_batch_size = 32):
+    def __init__(self, path, train_size = 0.7, test_size = 0.3, train_batch_size = 32, test_batch_size = 32):
         """ Set up the dataloaders and spec. """
     
         # Set up dataloaders
         self.data_path = path
         
         # Load from file into pandas dataframes
-        # TODO Cross-validation?
-        X_train, X_test, y_train, y_test, z_train, z_test = self.import_data(path, self..sens_attr_sub_sex, train_size, test_size) # TODO sens attr parametrize
+        X_train, X_test, y_train, y_test, z_train, z_test = self.import_data(path, self.sens_attr_sub_sex, train_size, test_size) # TODO sens attr parametrize
         
         self.train_data_loader = self.import_to_torch_dataloader(X_train, y_train, z_train, train_batch_size)
         self.test_data_loader = self.import_to_torch_dataloader(X_test, y_test, z_test, test_batch_size)
@@ -69,46 +68,45 @@ class AdultDataset():
 
     # RETROFITTED ADULT IMPORTING CODE FROM OLDER SYSTEM
     # TODO: sensitive attribute not right for multiclass sensitivity --> sensitivity is a onehot thing at present, should be true multiclass
-
     def import_data(self, path, sensitive_attribute_sub, train_size_, test_size_):
         """
-            Generate train/test datasets from file and sensitive attribute splitter function.
-            Returns tuple:
-                X_train -- onehot encoded and scaled features, sans sensitive attribute and target.
-                X_test
-                y_train -- boolean whether income was OVER 50K.
-                y_test
-                z_train -- boolean set by sensitive_attribute_sub from the sensitive attribute.
-                z_test
+            Generate train/test datasets from file and sensitive attribute splitter function. 
         """
 
-        # Parse file    
-        column_names = ["age", "workclass", "fnlwgt", "education", "education_num", "marital_status",
-            "occupation", "relationship", "race", "sex", "capital_gain", "capital_loss",
-            "hours_per_week", "country", "income_cat"]
+        # Parse file
 
-        integer_features = ["age", "fnlwgt", "education_num", "capital_gain", "capital_loss",
-            "hours_per_week"]
+        column_names = ['checking_account_status', 'duration', 'credit_history', 'purpose', 'amount', 'savings', 'employment', 'installment_rate', 'sex_and_status', 'guarantors', 'present_residence_since', 'property', 'age', 'other_install', 'housing', 'credits', 'job', 'dependents', 'has_telephone', 'foreign_worker', 'risk']
 
-        categorical_features = ["workclass", "education", "marital_status", "occupation", "relationship",
-            "race", "sex", "country"]
-        
-        data_raw = pd.read_csv(path, names = column_names, na_values="?", skipinitialspace=True)
+        numerical_features = ['duration', 'amount', 'installment_rate', 'present_residence_since', 'age', 'credits', 'dependents']
+        categorical_features = ['checking_account_status', 'credit_history', 'purpose', 'savings', 'employment', 'guarantors', 'property', 'other_install', 'housing', 'job', 'has_telephone', 'foreign_worker']
+
+
+        data_raw = pd.read_csv(path, names = column_names, delimiter=' ', na_values="?", skipinitialspace=True)
+
+
+        # Sex is inexplicably tied to marital status in the categorical variable for it, so we have to split it up
+        sex_isolator = lambda item : 'Male' if (item['sex_and_status'] == 'A91' or item['sex_and_status'] == 'A93' or item['sex_and_status'] == 'A94') else 'Female'
+        m_s_isolator = lambda item : 'single' if (item['sex_and_status'] in ['A93','A95']) else 'other' # What a metric!
+
+        data_raw['sex'] = data_raw.apply(sex_isolator, axis=1)
+        data_raw['marital_status'] = data_raw.apply(m_s_isolator, axis=1)
+        data_raw.drop('sex_and_status', axis=1)
 
 
         # Flag and drop sensitive attribute
         data_raw = sensitive_attribute_sub(data_raw)
 
 
-        # split labels
-        y = data_raw['income_cat']
-        y = y.map(lambda s : not (s == '<=50K' or s == '<=50K.'))
-        z = data_raw['sensitive']
-        X = data_raw.drop('income_cat', axis=1).drop('sensitive', axis=1)
+        # Extract labels
+        y = data_raw['risk'] == 2 # The label's one-indexed (1 == 'good', 2 == 'bad')
+        X = data_raw.drop('risk', axis=1)
+        z = X['sensitive']
+        X = X.drop('sensitive', axis=1)
+
 
         # One-hot encoding
         X = pd.get_dummies(X)
-
+        
         # Scaling
         X = pd.DataFrame(StandardScaler().fit_transform(X), columns = X.columns)
 
@@ -116,11 +114,6 @@ class AdultDataset():
         
         return X_train, X_test, y_train, y_test, z_train, z_test
 
-
-    def sens_attr_sub_race(self, df):
-        """ Assigns sensitive attribute tag based on whether the race attribute is 'Black'. """
-        df['sensitive'] = df['race'] == 'Black'
-        return df.drop('race', axis=1)
 
 
     def sens_attr_sub_sex(self, df):

@@ -147,15 +147,15 @@ class RLTarget():
         with torch.no_grad():
 
             total_correct = 0
-            total_data_items = 1e-1000 # Cheap nonzerodiv
+            total_data_items = 0 
 
             sensitive_sum = 0
-            sensitive_count = 1e-1000
+            sensitive_count = 0
             non_sensitive_sum = 0
-            non_sensitive_count = 1e-1000
+            non_sensitive_count = 0
 
-            zt_eo_states = [0, 1e-1000, 0, 1e-1000] # TP, ALLP, FP, ALLN for z == 1
-            zf_eo_states = [0, 1e-1000, 0, 1e-1000] # Ditto for z == 0
+            zt_eo_states = [0, 0, 0, 0] # TP, ALLP, FP, ALLN for z == 1
+            zf_eo_states = [0, 0, 0, 0] # Ditto for z == 0
 
 
             for data_item in (self.dataset.get_testing_data() if validation else self.dataset.get_training_data()):
@@ -191,18 +191,18 @@ class RLTarget():
                 self.__eq_odds_helper(zf_ys, zf_eo_states)                
                 
             
-            self.model_accuracy = total_correct / total_data_items
+            self.model_accuracy = self.safe_div(total_correct, total_data_items)
 
-            sens_pred_accept = sensitive_sum / sensitive_count
-            non_sens_pred_accept = non_sensitive_sum / non_sensitive_count
-            independence = sens_pred_accept / non_sens_pred_accept
+            sens_pred_accept = self.safe_div(sensitive_sum, sensitive_count)
+            non_sens_pred_accept = self.safe_div(non_sensitive_sum, non_sensitive_count)
+            independence = self.safe_div(sens_pred_accept, non_sens_pred_accept)
             self.model_independence = 0.0 if math.isnan(independence) else independence
 
             # Compute Equalized Odds maximum
-            sens_true_positive_rate = zt_eo_states[0] / zt_eo_states[1]
-            sens_false_positive_rate = zt_eo_states[2] / zt_eo_states[3]
-            non_sens_true_positive_rate = zf_eo_states[0] / zf_eo_states[1]
-            non_sens_false_positive_rate = zf_eo_states[2] / zf_eo_states[3]
+            sens_true_positive_rate = self.safe_div(zt_eo_states[0], zt_eo_states[1])
+            sens_false_positive_rate = self.safe_div(zt_eo_states[2], zt_eo_states[3])
+            non_sens_true_positive_rate = self.safe_div(zf_eo_states[0], zf_eo_states[1])
+            non_sens_false_positive_rate = self.safe_div(zf_eo_states[2], zf_eo_states[3])
             eo_false = abs(sens_false_positive_rate - non_sens_false_positive_rate)
             eo_true = abs(sens_true_positive_rate - non_sens_true_positive_rate)
             max_eo = max(eo_false, eo_true)
@@ -226,3 +226,11 @@ class RLTarget():
 
         states[0] += torch.logical_and(y_and_pred[:,:1] == 1, y_and_pred[:,1:] == 1).type(torch.float).sum().item()
         states[2] += torch.logical_and(y_and_pred[:,:1] == 0, y_and_pred[:,1:] == 1).type(torch.float).sum().item()   
+
+
+    def safe_div(self, x, y):
+        """ Fudges a divide by zero, so as to avoid model collapse. """
+        try:
+            return x / y
+        except ZeroDivisionError:
+             return 0.0

@@ -22,10 +22,10 @@ class COMPASDataset():
         
         # Load from file into pandas dataframes
         # TODO Cross-validation?
-        X_train, X_test, y_train, y_test, z_train, z_test = COMPASDataset.import_data(path, COMPASDataset.sens_attr_sub_sex, train_size, test_size) # TODO sens attr parametrize
+        X_train, X_test, y_train, y_test, z_train, z_test = self.import_data(path, self.sens_attr_sub_race, train_size, test_size) # TODO sens attr parametrize
         
-        self.train_data_loader = COMPASDataset.import_to_torch_dataloader(X_train, y_train, z_train, train_batch_size)
-        self.test_data_loader = COMPASDataset.import_to_torch_dataloader(X_test, y_test, z_test, test_batch_size)
+        self.train_data_loader = self.import_to_torch_dataloader(X_train, y_train, z_train, train_batch_size)
+        self.test_data_loader = self.import_to_torch_dataloader(X_test, y_test, z_test, test_batch_size)
 
         # Set shapes etc.
         self.n_x = list(self.train_data_loader.dataset.__getitem__(0)[0].shape)[0] - 2 # TODO note we're subtracting the label count here
@@ -50,8 +50,8 @@ class COMPASDataset():
     def get_retraining_data(self):
         """ In the event that the target hasn't been trained yet, create just for it a bespoke dataset. """
         # TODO: separation of validation concern.
-        X_retrain, _, y_retrain, _, z_retrain, _ = COMPASDataset.import_data(self.data_path, COMPASDataset.sens_attr_sub_sex, 0.95, 0.05) # Sens attr no-care
-        return COMPASDataset.import_to_torch_dataloader(X_retrain, y_retrain, z_retrain, 32)
+        X_retrain, _, y_retrain, _, z_retrain, _ = self.import_data(self.data_path, self.sens_attr_sub_race, 0.95, 0.05) # Sens attr no-care
+        return self.import_to_torch_dataloader(X_retrain, y_retrain, z_retrain, 32)
 
 
 
@@ -70,8 +70,7 @@ class COMPASDataset():
     # RETROFITTED ADULT IMPORTING CODE FROM OLDER SYSTEM
     # TODO: sensitive attribute not right for multiclass sensitivity --> sensitivity is a onehot thing at present, should be true multiclass
 
-    @staticmethod
-    def import_data(path, sensitive_attribute_sub, train_size_, test_size_):
+    def import_data(self, path, sensitive_attribute_sub, train_size_, test_size_):
         """
             Generate train/test datasets from file and sensitive attribute splitter function.
         """
@@ -111,52 +110,45 @@ class COMPASDataset():
 
 
         # Parse file    
-        # TODO hardcode drop sex, hardcoded add sensitive (OVERHAUL OVERHAUL)
-        feature_names = ['age','age_cat','race','juv_fel_count','juv_misd_count','juv_other_count','priors_count','c_charge_degree','sensitive']
+        # TODO hardcode drop race, hardcoded add sensitive (OVERHAUL OVERHAUL)
+        feature_names = ['age','age_cat','sex','juv_fel_count','juv_misd_count','juv_other_count','priors_count','c_charge_degree','sensitive']
         
         data_raw = pd.read_csv(path, na_values="?", skipinitialspace=True)
-
 
         # Flag and drop sensitive attribute
         data_raw = sensitive_attribute_sub(data_raw)
 
-
-        # Train-test split the data
+        # Split labels
         y = data_raw['two_year_recid'] # TODO or is_recid???
-        X = data_raw[feature_names]
+        z = data_raw['sensitive']
+        
+        X = data_raw[feature_names].drop('sensitive', axis=1)
 
         # One-hot encoding
         X = pd.get_dummies(X)
 
-        # Scaling (pop off the sensitive attr then pop back on so it's not scaled)
-        z_temp = X['sensitive']
+        # Scaling
         X = pd.DataFrame(StandardScaler().fit_transform(X), columns = X.columns)
-        X['sensitive'] = z_temp
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size = train_size_, test_size = test_size_, random_state = 42)
-
-
-        # Extract the sensitive attribute again (it was packaged for the split, as we don't have multi-target splitting)
-        z_train = X_train['sensitive']
-        X_train = X_train.drop('sensitive', axis=1)
-
-        z_test = X_test['sensitive']
-        X_test = X_test.drop('sensitive', axis=1)
-
+        X_train, X_test, y_train, y_test, z_train, z_test = train_test_split(X, y, z, train_size = train_size_, test_size = test_size_, random_state = 42)
         
         return X_train, X_test, y_train, y_test, z_train, z_test
 
 
 
-    @staticmethod
-    def sens_attr_sub_sex(df):
+    def sens_attr_sub_sex(self, df):
         """ Assigns sensitive attribute tag based on whether the sex attribute is 'Female'. """
         df['sensitive'] = df['sex'] == 'Female'
         return df.drop('sex', axis=1)
 
 
-    @staticmethod
-    def import_to_torch_dataloader(X_pd, y_pd, z_pd, batch_size):
+    def sens_attr_sub_race(self, df):
+        """ Assigns sensitive attribute tag based on whether the sex attribute is 'African-American'. """
+        df['sensitive'] = df['race'] == 'African-American'
+        return df.drop('race', axis=1)
+
+
+    def import_to_torch_dataloader(self, X_pd, y_pd, z_pd, batch_size):
         """ Converts the X, y, and z pandas dataframes produced by import_data into a pytorch dataloader. """
 
         # TODO: concatenation should really be done higher up.
