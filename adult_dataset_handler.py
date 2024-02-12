@@ -23,7 +23,7 @@ class AdultDataset():
         
         # Load from file into pandas dataframes
         # TODO Cross-validation?
-        X_train, X_test, y_train, y_test, z_train, z_test = self.import_data(path, self..sens_attr_sub_sex, train_size, test_size) # TODO sens attr parametrize
+        X_train, X_test, y_train, y_test, z_train, z_test = self.import_data(path, self.sens_attr_sub_sex, train_size, test_size) # TODO sens attr parametrize
         
         self.train_data_loader = self.import_to_torch_dataloader(X_train, y_train, z_train, train_batch_size)
         self.test_data_loader = self.import_to_torch_dataloader(X_test, y_test, z_test, test_batch_size)

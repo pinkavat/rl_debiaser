@@ -31,12 +31,12 @@ random.seed(0)
 
 # A) ADULT TASK
 # TODO note train size reduced for functionality testing
-#dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.3, test_size = 0.5)
-#target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_adult.pt')
+dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.3, test_size = 0.5)
+target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_adult.pt')
 
 # or B) COMPAS TASK
-dataset = compas_dataset_handler.COMPASDataset('../compas/compas_scores_two_years_clean.csv')
-target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_compas.pt')
+#dataset = compas_dataset_handler.COMPASDataset('../compas/compas_scores_two_years_clean.csv')
+#target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_compas.pt')
 
 # or C) GERMAN CREDIT TASK
 #dataset = german_dataset_handler.GermanDataset('../german/german.data')
@@ -47,26 +47,20 @@ print('')
 
 
 
-train.run(dataset, target, {
-    'name': "sigma_8.0_no_learning_20000_steps",
-    'episodes' : 3,
-    'steps' : 20000,
 
-    'agent_explore_sigma' : 8.0,
-    'actor_optimizer_params' : {'lr' : 0.0},
-    'critic_optimizer_params' : {'lr' : 0.0},
-})
 
 train.run(dataset, target, {
-    'name': "sigma_8.0_A_20000_steps",
-    'episodes' : 3,
-    'steps' : 20000,
+    'name': "sig_8.0_A_40000s_g0.99_t0.1",
+    'episodes' : 10,
+    'steps' : 40000,
+
+    'agent_gamma' : 0.99,
+    'agent_tau' : 0.1,
 
     'agent_explore_sigma' : 8.0,
     'actor_optimizer_params' : {'lr' : 1e-8},
     'critic_optimizer_params' : {'lr' : 1e-7},
 })
-
 
 
 

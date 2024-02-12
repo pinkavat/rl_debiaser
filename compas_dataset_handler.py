@@ -143,7 +143,7 @@ class COMPASDataset():
 
 
     def sens_attr_sub_race(self, df):
-        """ Assigns sensitive attribute tag based on whether the sex attribute is 'African-American'. """
+        """ Assigns sensitive attribute tag based on whether the race attribute is 'African-American'. """
         df['sensitive'] = df['race'] == 'African-American'
         return df.drop('race', axis=1)
 

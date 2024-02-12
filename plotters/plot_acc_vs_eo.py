@@ -55,8 +55,8 @@ label_texts = []
 for idx, label in enumerate(labels):
     label_texts.append(plt.text(eos[idx] + random.random() * 0.0001, accs[idx] + random.random() * 0.0001, label, ha='center', va='center'))
 
-adjust_text(label_texts)
-#adjust_text(label_texts, arrowprops=dict(arrowstyle='-', color='black'))
+#adjust_text(label_texts)
+adjust_text(label_texts, arrowprops=dict(arrowstyle='-', color='black'))
  
 ax.set(xlabel = 'minimum equalized odds violation', ylabel='accuracy at minimum EO')
 
