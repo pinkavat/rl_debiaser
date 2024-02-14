@@ -37,7 +37,7 @@ DEFAULTS = {
 
     'agent_explore_mu' : (0.0, "Mean of Gaussian random exploration process.", 'group_agent_explore'),
     'agent_explore_sigma' : (None, "Standard Deviation of Gaussian random exploration process. If specified, engages exploration", 'group_agent_explore'),
-    # TODO: decay
+    'agent_decay_fraction' : (None, "Proportion of step at which exploratory noise will have decayed to zero. If not specified, exploration does not decay."),
 
     'actor_optimizer' : (torch.optim.Adam, "Optimizer for Agent Actor net.", 'group_agent_optimizer'),
     'actor_optimizer_params' : ({'lr':1e-6}, "Parameters for the Actor Optimizer; passed through.", 'group_agent_optimizer'),
@@ -126,13 +126,23 @@ def run(dataset, target, spec, log_dir = 'logs/', agent_device_override='cpu'):
         
         print(f"Episode {episode}:")
 
-        target.reset()
-        agent.episode_reset()
-
         # ========== Train ==========
 
         step_schedule = spec.get('step_schedule', [])
         steps = step_schedule[episode] if episode < len(step_schedule) else spec.get('steps', DEFAULTS['steps'][0])
+
+        # Agent Reset, with decay control
+        decay_fraction = spec.get('agent_decay_fraction', DEFAULTS['agent_decay_fraction'][0])
+        if decay_fraction:
+            # Enable decay for this step
+            decay_per_step = 1.0 / (steps * decay_fraction)
+            agent.episode_reset(exploration_decay = decay_per_step)
+        else:
+            # Disable decay for this step
+            agent.episode_reset() # Decay defaults to zero
+
+        # Target reset
+        target.reset()
 
         use_eo = DEFAULTS['use_eo'][0]
 

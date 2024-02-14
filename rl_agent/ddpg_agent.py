@@ -21,7 +21,7 @@ class Agent():
 
     def __init__(
         self, dataset=None, actor=None, critic=None, actor_optimizer=None, critic_optimizer=None,
-        gamma=None, tau=None, exploration_process=None, exploration_linear_decay = 0.000, sample_size=None, memory_size=None, device_override=None
+        gamma=None, tau=None, exploration_process=None, sample_size=None, memory_size=None, device_override=None
     ):
         """
             Initialize a new Agent, with the given RLActor and RLCritic (actor_critic_wrappers.py) as actor and critic submodels.
@@ -54,7 +54,7 @@ class Agent():
 
         self.exploration_process = exploration_process
         self.explore_factor = 1.0
-        self.exploration_decay = exploration_linear_decay
+        self.exploration_decay = 0.0 
 
         # Set up memory
         self.sample_size = sample_size
@@ -63,10 +63,11 @@ class Agent():
 
 
 
-    def episode_reset(self):
+    def episode_reset(self, exploration_decay = 0.0):
         """ Resets the agent's state; to be invoked at the beginning of every episode. """
         self.memory.clear()
         self.explore_factor = 1.0
+        self.exploration_decay = exploration_decay
 
 
 

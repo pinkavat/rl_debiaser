@@ -48,84 +48,15 @@ print('')
 
 
 train.run(dataset, target, {
-    'name': "sig_8.0_no_learning_40000s",
-    'episodes' : 3,
-    'steps' : 40000,
-
-    'agent_explore_sigma' : 8.0,
-    'actor_optimizer_params' : {'lr' : 0.0},
-    'critic_optimizer_params' : {'lr' : 0.0},
-})
-
-train.run(dataset, target, {
-    'name': "sig_8.0_B_40000s",
-    'episodes' : 10,
-    'steps' : 40000,
-
-    'agent_explore_sigma' : 8.0,
-    'actor_optimizer_params' : {'lr' : 1e-7},
-    'critic_optimizer_params' : {'lr' : 1e-6},
-})
-
-train.run(dataset, target, {
-    'name': "sig_8.0_B_20000s",
-    'episodes' : 10,
-    'steps' : 20000,
-
-    'agent_explore_sigma' : 8.0,
-    'actor_optimizer_params' : {'lr' : 1e-7},
-    'critic_optimizer_params' : {'lr' : 1e-6},
-})
-
-train.run(dataset, target, {
-    'name': "sig_8.0_B_60000s",
-    'episodes' : 10,
+    'name': "sig_8.0_A_60000s_longer",
+    'episodes' : 20,
     'steps' : 60000,
 
     'agent_explore_sigma' : 8.0,
-    'actor_optimizer_params' : {'lr' : 1e-7},
-    'critic_optimizer_params' : {'lr' : 1e-6},
+    'actor_optimizer_params' : {'lr' : 1e-8},
+    'critic_optimizer_params' : {'lr' : 1e-7},
 })
 
-train.run(dataset, target, {
-    'name': "sig_8.0_B_80000s",
-    'episodes' : 5,
-    'steps' : 80000,
-
-    'agent_explore_sigma' : 8.0,
-    'actor_optimizer_params' : {'lr' : 1e-7},
-    'critic_optimizer_params' : {'lr' : 1e-6},
-})
-
-train.run(dataset, target, {
-    'name': "sig_8.0_no_learning_20000s",
-    'episodes' : 3,
-    'steps' : 20000,
-
-    'agent_explore_sigma' : 8.0,
-    'actor_optimizer_params' : {'lr' : 0.0},
-    'critic_optimizer_params' : {'lr' : 0.0},
-})
-
-train.run(dataset, target, {
-    'name': "sig_8.0_no_learning_60000s",
-    'episodes' : 3,
-    'steps' : 60000,
-
-    'agent_explore_sigma' : 8.0,
-    'actor_optimizer_params' : {'lr' : 0.0},
-    'critic_optimizer_params' : {'lr' : 0.0},
-})
-
-train.run(dataset, target, {
-    'name': "sig_8.0_no_learning_80000s",
-    'episodes' : 3,
-    'steps' : 80000,
-
-    'agent_explore_sigma' : 8.0,
-    'actor_optimizer_params' : {'lr' : 0.0},
-    'critic_optimizer_params' : {'lr' : 0.0},
-})
 
 
 
