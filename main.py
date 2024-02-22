@@ -10,6 +10,7 @@ import random # Ditto
 import copy
 
 import train
+from genetic_hyper_search import genetic_hyper_search
 import adult_dataset_handler
 import compas_dataset_handler
 import german_dataset_handler
@@ -27,30 +28,55 @@ torch.use_deterministic_algorithms(True)
 random.seed(0)
 
 
-# Set up dataset and target model
+# Choose task
 
 # A) ADULT TASK
 # TODO note train size reduced for functionality testing
 dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.3, test_size = 0.5)
-target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_adult.pt')
+target_param_path = 'temp/targ_params_adult.pt'
 
 # or B) COMPAS TASK
 #dataset = compas_dataset_handler.COMPASDataset('../compas/compas_scores_two_years_clean.csv')
-#target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_compas.pt')
+#target_param_path='temp/targ_params_compas.pt'
 
 # or C) GERMAN CREDIT TASK
 #dataset = german_dataset_handler.GermanDataset('../german/german.data')
-#target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_german.pt')
+#target_param_path = 'temp/targ_params_german.pt'
+
+
+
+# Set up target
+
+target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path=target_param_path, hidden_layer_spec = {'hidden_layers':[50,50]})
 
 print('')
 
 
-
+#genetic_hyper_search(dataset, target, generations=10, population=10, episodes_per_generation=3, mutation_rate=0.1) # TODO
 
 train.run(dataset, target, {
-    'name': "sig_8.0_A_60000s_longer",
-    'episodes' : 20,
+    'name': "sig_8.0_no_learning_80000s_with_50h_50h_target",
+    'episodes' : 4,
+    'steps' : 80000,
+
+    'agent_explore_sigma' : 8.0,
+    'actor_optimizer_params' : {'lr' : 0.0},
+    'critic_optimizer_params' : {'lr' : 0.0},
+})
+
+
+
+
+
+
+"""
+
+train.run(dataset, target, {
+    'name': "sig_8.0_A_60000s_0.5d",
+    'episodes' : 3,
     'steps' : 60000,
+
+    'agent_explore_decay': 0.5,
 
     'agent_explore_sigma' : 8.0,
     'actor_optimizer_params' : {'lr' : 1e-8},
@@ -58,7 +84,7 @@ train.run(dataset, target, {
 })
 
 
-
+"""
 
 
 """

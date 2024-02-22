@@ -9,6 +9,7 @@ import time
 import random
 
 from rl_agent.ddpg_agent import Agent
+from specced_perceptron import SpeccedPerceptron
 
 TODO_STATE_SIZE = 2 # TODO Number of items in the 'state'; the input passed to the actor. A TASK SPECIFICATION, rather than a hardcoded thing, ideally.
 
@@ -22,7 +23,6 @@ SAMPLE_CURRENT_METRIC_INTERVAL = 32
 DEFAULTS = {
     
     'name' : ('unnamed_<time>', "Descriptive unique name for the run.", 'group_meta'),
-    'promising_threshold' : (float('-inf'), "Used for repeatability testing; if the metric drops below this, will stop and return True.", 'group_meta'),
     'use_eo' : (True, "If true, minimize Equalized Odds violation; if false, maximize Demographic Parity.", 'group_meta'),
 
     'episodes' : (10, "Number of episodes: each episode is a series of steps, bookended by target reset and agent memory clear.", 'group_steps'),
@@ -37,7 +37,7 @@ DEFAULTS = {
 
     'agent_explore_mu' : (0.0, "Mean of Gaussian random exploration process.", 'group_agent_explore'),
     'agent_explore_sigma' : (None, "Standard Deviation of Gaussian random exploration process. If specified, engages exploration", 'group_agent_explore'),
-    'agent_decay_fraction' : (None, "Proportion of step at which exploratory noise will have decayed to zero. If not specified, exploration does not decay."),
+    'agent_explore_decay' : (None, "Proportion of step at which exploratory noise will have decayed to zero. If not specified, exploration does not decay."),
 
     'actor_optimizer' : (torch.optim.Adam, "Optimizer for Agent Actor net.", 'group_agent_optimizer'),
     'actor_optimizer_params' : ({'lr':1e-6}, "Parameters for the Actor Optimizer; passed through.", 'group_agent_optimizer'),
@@ -74,25 +74,8 @@ def run(dataset, target, spec, log_dir = 'logs/', agent_device_override='cpu'):
 
 
     # Set up actor and critic models
-    class Perceptron(torch.nn.Module):
-        def __init__(self, layer_spec):
-            super().__init__()
-
-            layers = [f(layer_spec[x], layer_spec[x+1]) # note to self: cure addiction to list comprehensions 
-                for x in range(len(layer_spec) - 1) 
-                for f in (lambda m,n: torch.nn.Linear(m,n), lambda m,n:torch.nn.PReLU())]
-            layers 
-            self.perceptron = torch.nn.Sequential(*layers[:-1]) # Trim the last ReLU
-
-        def forward(self, X):
-            return self.perceptron(X)
-
-
-    actor_layer_spec = get_perceptron_spec(spec.get('actor_core_spec', DEFAULTS['actor_core_spec'][0]), TODO_STATE_SIZE, dataset.data_item_size)
-    actor = Perceptron(actor_layer_spec)
-
-    critic_layer_spec = get_perceptron_spec(spec.get('critic_core_spec', DEFAULTS['critic_core_spec'][0]), TODO_STATE_SIZE + dataset.data_item_size, 1)
-    critic = Perceptron(critic_layer_spec)
+    actor = SpeccedPerceptron.from_text_spec(spec.get('actor_core_spec', DEFAULTS['actor_core_spec'][0]), TODO_STATE_SIZE, dataset.data_item_size)
+    critic = SpeccedPerceptron.from_text_spec(spec.get('critic_core_spec', DEFAULTS['critic_core_spec'][0]), TODO_STATE_SIZE + dataset.data_item_size, 1)
 
     actor_optimizer_fn = spec.get('actor_optimizer', DEFAULTS['actor_optimizer'][0])
     actor_optimizer = actor_optimizer_fn(actor.parameters(), **spec.get('actor_optimizer_params', DEFAULTS['actor_optimizer_params'][0]))
@@ -118,8 +101,9 @@ def run(dataset, target, spec, log_dir = 'logs/', agent_device_override='cpu'):
     print(f"\x1b[1mInitial target EO violation: {target.get_max_equalized_odds_violation(validation=True)}\x1b[0m")
 
     # Log initial state
-    log(log_path, [0, 0, 1, target.get_accuracy(), target.get_independence(), target.get_max_equalized_odds_violation(), 0.0])
+    log(log_path, [0, 0, 1, target.get_accuracy(validation=True), target.get_independence(validation=True), target.get_max_equalized_odds_violation(validation=True), 0.0])
     overall_step = 1
+    terminal_eo = target.get_max_equalized_odds_violation(validation=True)
     
     # Enter training loop
     for episode in range(spec.get('episodes', DEFAULTS['episodes'][0])): # "episode" for RL, not "epoch"
@@ -132,7 +116,7 @@ def run(dataset, target, spec, log_dir = 'logs/', agent_device_override='cpu'):
         steps = step_schedule[episode] if episode < len(step_schedule) else spec.get('steps', DEFAULTS['steps'][0])
 
         # Agent Reset, with decay control
-        decay_fraction = spec.get('agent_decay_fraction', DEFAULTS['agent_decay_fraction'][0])
+        decay_fraction = spec.get('agent_explore_decay', DEFAULTS['agent_explore_decay'][0])
         if decay_fraction:
             # Enable decay for this step
             decay_per_step = 1.0 / (steps * decay_fraction)
@@ -202,17 +186,14 @@ def run(dataset, target, spec, log_dir = 'logs/', agent_device_override='cpu'):
 
         log(log_path, [episode + 1, overall_step, 1, target.get_accuracy(validation=True), target.get_independence(validation=True), target.get_max_equalized_odds_violation(validation=True), 0.0])
 
+        terminal_eo = test_eo
 
-        # Checkpoint-save if needful
-        if (episode % 10 == 0):
+
+        # Checkpoint-save if needful (TODO overhaul; add reentry mechanism)
+        if (episode % 5 == 0):
             agent.save_to(f'temp/checkpoints/episode_{episode}.tar')
 
-
-        # Check if sufficiently good to stop
-        if test_eo < spec.get('promising_threshold', DEFAULTS['promising_threshold'][0]):
-            return True
-
-    return False # Ran out the episodes
+    return terminal_eo
 
 
 
@@ -229,15 +210,3 @@ def log(path, items, mode='a'):
     with open(path, mode) as fp:
         fp.write(",".join([str(item) for item in items]))
         fp.write("\n")
-
-
-# Helper for parsing perceptron core specifications
-def get_perceptron_spec(spec, in_n, out_n):
-    if 'hidden_layers' in spec:
-        # Manual layer specification
-        return [in_n, *(spec['hidden_layers']), out_n]
-    else:
-        # Num and counts given
-        hidden_count = spec.get('hidden_count', 2)
-        hidden_size = spec.get('hidden_size', 100)
-        return [in_n, *[hidden_size for c in range(hidden_count)], out_n]

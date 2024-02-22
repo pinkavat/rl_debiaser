@@ -8,9 +8,11 @@
 import torch
 import math # for isnan below
 
+from specced_perceptron import SpeccedPerceptron
+
 class RLTarget():
     
-    def __init__(self, dataset, device_override = None, hidden_layers = 50, learning_rate = 1e-5, parameter_path = 'params_target.pt'):
+    def __init__(self, dataset, device_override = None, hidden_layer_spec = {'hidden_layers':[50]}, learning_rate = 1e-5, parameter_path = 'params_target.pt'):
         
         self.dataset = dataset
         self.device = device_override if device_override else ("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
@@ -26,24 +28,10 @@ class RLTarget():
 
         # ========== MODEL CORE SETUP ==========
 
-        # Model core
-        class PrimitiveClf(torch.nn.Module):
-            def __init__(self, n_in, n_out, n_hidden):
-                super().__init__()
-                
-                self.steps = torch.nn.Sequential(
-                    torch.nn.Linear(n_in, n_hidden),
-                    torch.nn.ReLU(),
-                    torch.nn.Linear(n_hidden, n_out),
-                    torch.nn.Sigmoid()
-                )
-
-            def forward(self, X):
-                return self.steps(X)
 
         # Attempt to load parameters from file
         try:
-            self.model = PrimitiveClf(dataset.n_x + dataset.n_z, dataset.n_y, hidden_layers)
+            self.model = SpeccedPerceptron.from_text_spec(hidden_layer_spec, dataset.n_x + dataset.n_z, dataset.n_y, torch.nn.Sigmoid()).to(self.device)
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
             self.loss_fn = torch.nn.BCELoss()
 
@@ -58,7 +46,7 @@ class RLTarget():
 
             assert retraining_data is not None, "Don't have parameters and couldn't get retraining data from dataset"
 
-            self.model = PrimitiveClf(dataset.n_x + dataset.n_z, dataset.n_y, hidden_layers).to(self.device)
+            self.model = SpeccedPerceptron.from_text_spec(hidden_layer_spec, dataset.n_x + dataset.n_z, dataset.n_y, torch.nn.Sigmoid()).to(self.device)
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
             self.loss_fn = torch.nn.BCELoss() # TODO duplicate code
 
