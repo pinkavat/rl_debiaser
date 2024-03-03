@@ -10,13 +10,12 @@ import random # Ditto
 import copy
 
 import train
-from genetic_hyper_search import genetic_hyper_search
+#from genetic_hyper_search import genetic_hyper_search
 import adult_dataset_handler
 import compas_dataset_handler
 import german_dataset_handler
 import target_nn_binary
-
-
+import target_logistic_binary
 
 
 
@@ -32,12 +31,12 @@ random.seed(0)
 
 # A) ADULT TASK
 # TODO note train size reduced for functionality testing
-dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.3, test_size = 0.5)
-target_param_path = 'temp/targ_params_adult.pt'
+#dataset = adult_dataset_handler.AdultDataset('../adult/adult.data', train_size = 0.3, test_size = 0.5)
+#target_param_path = 'temp/targ_params_adult.pt'
 
 # or B) COMPAS TASK
-#dataset = compas_dataset_handler.COMPASDataset('../compas/compas_scores_two_years_clean.csv')
-#target_param_path='temp/targ_params_compas.pt'
+dataset = compas_dataset_handler.COMPASDataset('../compas/compas_scores_two_years_clean.csv')
+target_param_path='temp/targ_params_compas.pt'
 
 # or C) GERMAN CREDIT TASK
 #dataset = german_dataset_handler.GermanDataset('../german/german.data')
@@ -47,22 +46,75 @@ target_param_path = 'temp/targ_params_adult.pt'
 
 # Set up target
 
-target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path=target_param_path, hidden_layer_spec = {'hidden_layers':[50,50]})
+target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path=target_param_path, hidden_layer_spec = {'hidden_layers':[100]})
+#target = target_logistic_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_adult_logistic.pt')
 
 print('')
 
 
 #genetic_hyper_search(dataset, target, generations=10, population=10, episodes_per_generation=3, mutation_rate=0.1) # TODO
 
+
+
+
 train.run(dataset, target, {
-    'name': "sig_8.0_no_learning_80000s_with_50h_50h_target",
+    'name': "schedule_2",
+    'episodes' : 7,
+    'steps' : 100000,
+    
+    'step_schedule' : [100000, 25000, 50000, 50000, 50000, 50000, ],
+
+    'agent_explore_sigma' : 8.0,
+    'actor_optimizer_params' : {'lr' : 1e-7},
+    'critic_optimizer_params' : {'lr' : 1e-6},
+})
+
+
+
+
+"""
+train.run(dataset, target, {
+    'name': "sig_8.0_no_learning_100000s",
     'episodes' : 4,
-    'steps' : 80000,
+    'steps' : 100000,
 
     'agent_explore_sigma' : 8.0,
     'actor_optimizer_params' : {'lr' : 0.0},
     'critic_optimizer_params' : {'lr' : 0.0},
 })
+
+
+train.run(dataset, target, {
+    'name': "sig_8.0_B_100000s",
+    'episodes' : 4,
+    'steps' : 100000,
+
+    'agent_explore_sigma' : 8.0,
+    'actor_optimizer_params' : {'lr' : 1e-7},
+    'critic_optimizer_params' : {'lr' : 1e-6},
+})
+
+train.run(dataset, target, {
+    'name': "sig_8.0_B_100000s_2",
+    'episodes' : 4,
+    'steps' : 100000,
+
+    'agent_explore_sigma' : 8.0,
+    'actor_optimizer_params' : {'lr' : 1e-7},
+    'critic_optimizer_params' : {'lr' : 1e-6},
+})
+
+train.run(dataset, target, {
+    'name': "sig_8.0_B_100000s_3",
+    'episodes' : 4,
+    'steps' : 100000,
+
+    'agent_explore_sigma' : 8.0,
+    'actor_optimizer_params' : {'lr' : 1e-7},
+    'critic_optimizer_params' : {'lr' : 1e-6},
+})
+"""
+
 
 
 

@@ -20,12 +20,14 @@ import torch
 sys.path.append('..')
 import adult_dataset_handler
 import compas_dataset_handler
+import german_dataset_handler
 
 adult_dataset = adult_dataset_handler.AdultDataset('../../adult/adult.data')
 compas_dataset = compas_dataset_handler.COMPASDataset('../../compas/compas_scores_two_years_clean.csv')
+german_dataset = german_dataset_handler.GermanDataset('../../german/german.data')
 
 # TASK CONTROL
-task_dataset = compas_dataset
+task_dataset = german_dataset
 
 
 

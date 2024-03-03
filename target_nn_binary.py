@@ -53,7 +53,7 @@ class RLTarget():
             print("Couldn't load target parameters from", parameter_path, ", retraining target from scratch:")
 
             # Retrain from scratch
-            for epoch in range(10): # TODO a non-hyperparam but ought to still vary
+            for epoch in range(40): # TODO a non-hyperparam but ought to still vary
                 print(f"\tEpoch {epoch}:", end = '')
                 self.train(retraining_data)
                 print(f"\tTest accuracy: {self.get_accuracy()}")
