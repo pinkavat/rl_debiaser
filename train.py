@@ -54,7 +54,8 @@ DEFAULTS = {
 
 def run(dataset, target, spec, log_dir = 'logs/', agent_device_override='cpu'):
     """
-        TODO document
+        Execute a trial with the given dataset, target model, and trial specification.
+        agent_device_override is passed to the Agent to override device detection.
     """
 
     run_name = spec.get('name', f"unnamed_{int(time.time() * 1000.0)}")

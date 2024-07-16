@@ -46,8 +46,8 @@ target_param_path='temp/targ_params_compas.pt'
 
 # Set up target
 
-target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path=target_param_path, hidden_layer_spec = {'hidden_layers':[100]})
-#target = target_logistic_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_adult_logistic.pt')
+#target = target_nn_binary.RLTarget(dataset, device_override='cpu', parameter_path=target_param_path, hidden_layer_spec = {'hidden_layers':[50,50]})
+target = target_logistic_binary.RLTarget(dataset, device_override='cpu', parameter_path='temp/targ_params_compas_logistic.pt')
 
 print('')
 
@@ -55,24 +55,22 @@ print('')
 #genetic_hyper_search(dataset, target, generations=10, population=10, episodes_per_generation=3, mutation_rate=0.1) # TODO
 
 
-
+"""
 
 train.run(dataset, target, {
-    'name': "schedule_2",
+    'name': "more_episodes",
     'episodes' : 7,
     'steps' : 100000,
     
-    'step_schedule' : [100000, 25000, 50000, 50000, 50000, 50000, ],
-
     'agent_explore_sigma' : 8.0,
     'actor_optimizer_params' : {'lr' : 1e-7},
     'critic_optimizer_params' : {'lr' : 1e-6},
 })
 
 
-
-
 """
+
+
 train.run(dataset, target, {
     'name': "sig_8.0_no_learning_100000s",
     'episodes' : 4,
@@ -86,7 +84,7 @@ train.run(dataset, target, {
 
 train.run(dataset, target, {
     'name': "sig_8.0_B_100000s",
-    'episodes' : 4,
+    'episodes' : 8,
     'steps' : 100000,
 
     'agent_explore_sigma' : 8.0,
@@ -96,7 +94,7 @@ train.run(dataset, target, {
 
 train.run(dataset, target, {
     'name': "sig_8.0_B_100000s_2",
-    'episodes' : 4,
+    'episodes' : 8,
     'steps' : 100000,
 
     'agent_explore_sigma' : 8.0,
@@ -106,14 +104,14 @@ train.run(dataset, target, {
 
 train.run(dataset, target, {
     'name': "sig_8.0_B_100000s_3",
-    'episodes' : 4,
+    'episodes' : 8,
     'steps' : 100000,
 
     'agent_explore_sigma' : 8.0,
     'actor_optimizer_params' : {'lr' : 1e-7},
     'critic_optimizer_params' : {'lr' : 1e-6},
 })
-"""
+
 
 
 
